@@ -55,6 +55,7 @@ namespace osuCrypto
         {}
 
         void sendRecv(Channel& programChl, Channel& helpChl, Matrix<u8> src, MatrixView<u8> dest);
+        void programServer(Channel& clientChl, Channel& helpChl, Matrix<u8> src, MatrixView<u8> dest);
         void help(Channel& programChl, Channel& sendrChl, PRNG& prng, u32 destRows, u32 srcRows, u32 bytes);
         void program(
             Channel& helpChl, 
@@ -63,8 +64,39 @@ namespace osuCrypto
             PRNG& prng, 
             MatrixView<u8> dest,
             OutputType type = OutputType::Overwrite);
+        void programClient(
+            Channel& helpChl, 
+            Channel& serverChl,
+            Program& prog, 
+            PRNG& prng, 
+            Matrix<u8> src,
+            MatrixView<u8> dest,
+            OutputType type = OutputType::Overwrite);  
 
-
+        void OEPClient(
+            Channel& helpChl, 
+            Channel& serverChl,
+            std::vector<u64> srcTag,
+            std::vector<u64> destTag,
+            PRNG& prng, 
+            Matrix<u8> src,
+            MatrixView<u8> dest,
+            OutputType type = OutputType::Overwrite
+        );
+        void OEPServer(
+            Channel& clientChl,
+            Channel& helpChl,
+            Matrix<u8> src,
+            MatrixView<u8> dest
+        );
+        void OEPHelper(
+            Channel& clientChl,
+            Channel& serverChl,
+            PRNG& prng, 
+            u32 destRows,
+            u32 srcRows,
+            u32 bytes
+        );
 
         void sendSelect(Channel& programChl, Channel& helpChl, Matrix<u8> src);
         void recvSelect(Channel& programChl, Channel& sendrChl, MatrixView<u8> dest, u64 srcRows);

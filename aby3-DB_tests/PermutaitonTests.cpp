@@ -578,10 +578,15 @@ void switch_full_test()
     Channel chl21 = s21.addChannel();
 
 
-    u64 trials = 100;
-    u64 srcSize = 50;
-    u64 destSize = srcSize / 2;
-    u64 bytes = 1;
+    // u64 trials = 100;
+    // u64 srcSize = 50;
+    // u64 destSize = srcSize / 2;
+    u64 trials = 1;
+    u64 srcSize = (1 << 24);
+    u64 destSize = (1 << 24);
+    // printf("srcSize = %lu\n", srcSize);
+    // printf("destSize = %lu\n", destSize);
+    u64 bytes = 8;
 
     Matrix<u8> src(srcSize, bytes);
     Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
@@ -667,6 +672,251 @@ void switch_full_test()
                 std::cout << "\ns[" << s << "] = ";
                 for (auto j = 0ull; j < bytes; ++j)
                     std::cout << ' ' << std::setw(2) << std::hex << int(src(s, j));
+
+                std::cout << std::endl << std::dec;
+            }
+
+
+        }
+
+        if (failed)
+            throw std::runtime_error("");
+
+    }
+}
+
+void OEP_test()
+{
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel();
+    Channel chl10 = s10.addChannel();
+    Channel chl02 = s02.addChannel();
+    Channel chl20 = s20.addChannel();
+    Channel chl12 = s12.addChannel();
+    Channel chl21 = s21.addChannel();
+
+
+    // u64 trials = 100;
+    // u64 srcSize = 50;
+    // u64 destSize = srcSize / 2;
+    u64 trials = 1;
+    u64 srcSize = (1 << 20);
+    u64 destSize = (1 << 20);
+    // printf("srcSize = %lu\n", srcSize);
+    // printf("destSize = %lu\n", destSize);
+    u64 bytes = 1;
+
+    Matrix<u8> src0(srcSize, bytes), src1(srcSize, bytes);
+    Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
+
+
+    for (auto t = 0ull; t < trials; ++t)
+    {
+        PRNG prng(toBlock(t));
+
+        prng.get(src0.data(), src0.size());
+        prng.get(src1.data(), src1.size());
+
+        //for (auto i = 0; i < src.rows(); ++i)
+        //{
+        //    std::cout << "s[" << i << "] = ";
+        //    for (auto j = 0; j < src.cols(); ++j)
+        //    {
+        //        std::cout << " " << std::setw(2) << std::hex << int(src(i, j));
+        //    }
+        //    std::cout << std::endl << std::dec;
+        //}
+
+        OblvSwitchNet::Program prog;
+        prog.init(srcSize, destSize);
+
+        for (u64 i = 0ull; i < destSize; ++i)
+        {
+            prog.addSwitch(prng.get<u32>() % srcSize, (u32)i);
+            //prog.addSwitch(0, i);
+            //std::cout << "switch[" << i << "] = " << prog.mSrcDests[i][0] << " -> " << prog.mSrcDests[i][1] << std::endl;
+        }
+
+
+        auto t0 = std::thread([&]() {
+            setThreadName("t0");
+            OblvSwitchNet snet("test");
+            snet.programClient(chl02, chl01, prog, prng, src0, dest0);
+        });
+
+        auto t1 = std::thread([&]() {
+            setThreadName("t1");
+            OblvSwitchNet snet("test");
+            snet.programServer(chl10, chl12, src1, dest1);
+        });
+
+        auto t2 = std::thread([&]() {
+            setThreadName("t2");
+            OblvSwitchNet snet("test");
+            PRNG prng2(toBlock(44444));
+            snet.help(chl20, chl21, prng2, destSize, srcSize, bytes);
+        });
+
+        t0.join();
+        t1.join();
+        t2.join();
+
+
+        bool print = false;
+        if (print)
+            std::cout << std::endl;
+        bool failed = false;
+        for (u64 i = 0; i < prog.mSrcDests.size(); ++i)
+        {
+            auto s = prog.mSrcDests[i].mSrc;
+            auto d = prog.mSrcDests[i].mDest;
+
+            for (auto j = 0ull; j < bytes; ++j)
+            {
+                if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                {
+                    failed = true;
+                }
+            }
+
+            if (print)
+            {
+                std::cout << "d[" << d << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                {
+                    if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                        std::cout << Color::Red;
+                    std::cout << ' ' << std::setw(2) << std::hex << int(dest0(d, j) ^ dest1(d, j)) << ColorDefault;
+                }
+                std::cout << "\ns[" << s << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                    std::cout << ' ' << std::setw(2) << std::hex << int(src0(s, j) ^ src1(s, j));
+
+                std::cout << std::endl << std::dec;
+            }
+
+
+        }
+
+        if (failed)
+            throw std::runtime_error("");
+
+    }
+}
+
+void full_OEP_test()
+{
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel();
+    Channel chl10 = s10.addChannel();
+    Channel chl02 = s02.addChannel();
+    Channel chl20 = s20.addChannel();
+    Channel chl12 = s12.addChannel();
+    Channel chl21 = s21.addChannel();
+
+
+    // u64 trials = 100;
+    // u64 srcSize = 50;
+    // u64 destSize = srcSize / 2;
+    u64 trials = 1;
+    u64 srcSize = (1 << 10);
+    u64 destSize = (1 << 22);
+    // printf("srcSize = %lu\n", srcSize);
+    // printf("destSize = %lu\n", destSize);
+    u64 bytes = 1;
+
+    Matrix<u8> src0(srcSize, bytes), src1(srcSize, bytes);
+    Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
+    std::vector<u64> srcTag(srcSize, 0);
+    std::vector<u64> destTag(destSize, 0);
+
+    for (auto t = 0ull; t < trials; ++t)
+    {
+        PRNG prng(toBlock(t));
+
+        prng.get(src0.data(), src0.size());
+        prng.get(src1.data(), src1.size());
+
+        //for (auto i = 0; i < src.rows(); ++i)
+        //{
+        //    std::cout << "s[" << i << "] = ";
+        //    for (auto j = 0; j < src.cols(); ++j)
+        //    {
+        //        std::cout << " " << std::setw(2) << std::hex << int(src(i, j));
+        //    }
+        //    std::cout << std::endl << std::dec;
+        //}
+
+        for (u64 i = 0ull; i < srcSize; ++i) srcTag[i] = i;
+        for (u64 i = 0ull; i < destSize; ++i) destTag[i] = prng.get<u32>() % srcSize;
+
+        auto t0 = std::thread([&]() {
+            setThreadName("t0");
+            OblvSwitchNet snet("test");
+            snet.OEPClient(chl02, chl01, srcTag, destTag, prng, src0, dest0);
+        });
+
+        auto t1 = std::thread([&]() {
+            setThreadName("t1");
+            OblvSwitchNet snet("test");
+            snet.OEPServer(chl10, chl12, src1, dest1);
+        });
+
+        auto t2 = std::thread([&]() {
+            setThreadName("t2");
+            OblvSwitchNet snet("test");
+            PRNG prng2(toBlock(44444));
+            snet.OEPHelper(chl20, chl21, prng2, destSize, srcSize, bytes);
+        });
+
+        t0.join();
+        t1.join();
+        t2.join();
+
+
+        bool print = false;
+        if (print)
+            std::cout << std::endl;
+        bool failed = false;
+        for (u64 i = 0; i < destSize; ++i)
+        {
+            auto s = destTag[i];
+            auto d = i;
+
+            for (auto j = 0ull; j < bytes; ++j)
+            {
+                if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                {
+                    failed = true;
+                }
+            }
+
+            if (print)
+            {
+                std::cout << "d[" << d << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                {
+                    if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                        std::cout << Color::Red;
+                    std::cout << ' ' << std::setw(2) << std::hex << int(dest0(d, j) ^ dest1(d, j)) << ColorDefault;
+                }
+                std::cout << "\ns[" << s << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                    std::cout << ' ' << std::setw(2) << std::hex << int(src0(s, j) ^ src1(s, j));
 
                 std::cout << std::endl << std::dec;
             }

@@ -2,6 +2,7 @@
 #include <cryptoTools/Common/BitIterator.h>
 #include <cryptoTools/Crypto/PRNG.h>
 #include <iomanip>
+#include <unordered_map>
 
 namespace osuCrypto
 {
@@ -134,7 +135,104 @@ namespace osuCrypto
         oblvPerm.program(sendrChl, helpChl, std::move(perm), prng, dest, mTag + "_prog_final", OutputType::Additive);
     }
 
+    void OblvSwitchNet::programServer(
+        Channel & clientChl, 
+        Channel & helpChl, 
+        Matrix<u8> src, 
+        MatrixView<u8> dest) 
+    {
+        sendRecv(clientChl, helpChl, std::move(src), dest);
+    }
 
+    void OblvSwitchNet::programClient(
+        Channel & helpChl, 
+        Channel & serverChl, 
+        Program & prog, 
+        PRNG & prng, 
+        Matrix<u8> src,
+        MatrixView<u8> dest,
+        OutputType type) 
+    {
+        dest.setZero();
+        if (dest.rows() != prog.mSrcDests.size()) {
+            printf("Unequal dest rows and prog dest size!");
+            exit(-1);
+        }
+        program(helpChl, serverChl, prog, prng, dest, type);
+        for (u64 i = 0; i < prog.mSrcDests.size(); ++i) {
+            auto s = prog.mSrcDests[i].mSrc;
+            auto d = prog.mSrcDests[i].mDest;
+            for (u64 j = 0; j < dest.cols(); ++j) {
+                // printf("%d ", int(src(s,j)));
+                // printf("%d ", int(dest(d,j)));
+                dest(d, j) ^= src(s, j);
+            }
+        }
+    }
+
+    void OblvSwitchNet::OEPClient(
+        Channel& helpChl, 
+        Channel& serverChl,
+        std::vector<u64> srcTag,
+        std::vector<u64> destTag,
+        PRNG& prng, 
+        Matrix<u8> src,
+        MatrixView<u8> dest,
+        OutputType type
+    ) {
+        u64 srcSize = srcTag.size();
+        u64 destSize = destTag.size();
+        std::vector<u32> destId(destSize, 0);
+        std::unordered_map<u64, u32> tagMap;
+        for (u64 i = 0; i < srcSize; ++i) tagMap[srcTag[i]] = u32(i);
+        for (u64 i = 0; i < destSize; ++i) {
+            if (auto search = tagMap.find(destTag[i]); search != tagMap.end())
+                destId[i] = search->second;
+            else
+                destId[i] = srcSize;               
+        }
+        u64 dummiedSrcSize = srcSize + 1;
+        if (dummiedSrcSize < destSize) dummiedSrcSize = destSize;
+        Matrix<u8> dummiedSrc = src;
+        dummiedSrc.resize(dummiedSrcSize, src.cols());
+
+        OblvSwitchNet::Program prog;
+        prog.init(dummiedSrcSize, destSize);
+        for (u64 i = 0ull; i < destSize; ++i) {
+            prog.addSwitch(destId[i], (u32)i);
+        }
+
+        programClient(helpChl, serverChl, prog, prng, dummiedSrc, dest, type);           
+    }
+
+    void OblvSwitchNet::OEPServer(
+        Channel& clientChl,
+        Channel& helpChl,
+        Matrix<u8> src,
+        MatrixView<u8> dest
+    ) {
+        u64 srcSize = src.rows();
+        u64 destSize = dest.rows();
+        u64 dummiedSrcSize = srcSize + 1;
+        if (dummiedSrcSize < destSize) dummiedSrcSize = destSize;
+        Matrix<u8> dummiedSrc = src;
+        dummiedSrc.resize(dummiedSrcSize, src.cols());
+
+        programServer(clientChl, helpChl, dummiedSrc, dest);
+    }
+
+    void OblvSwitchNet::OEPHelper(
+        Channel& clientChl,
+        Channel& serverChl,
+        PRNG& prng, 
+        u32 destRows,
+        u32 srcRows,
+        u32 bytes
+    ) {
+        u64 dummiedSrcSize = srcRows + 1;
+        if (dummiedSrcSize < destRows) dummiedSrcSize = destRows;    
+        help(clientChl, serverChl, prng, destRows, dummiedSrcSize, bytes);    
+    }
 
     void OblvSwitchNet::sendSelect(Channel & programChl, Channel & helpChl, Matrix<u8> src)
     {

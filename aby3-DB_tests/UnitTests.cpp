@@ -22,4 +22,7 @@ oc::TestCollection DB_tests([](oc::TestCollection& tc) {
     tc.add("DB_Intersect_ls_test         ", DB_Intersect_ls_test);
     tc.add("DB_leftUnion_test            ", DB_leftUnion_test);
     tc.add("xtabs_test                   ", xtabs_test);
+    
+    tc.add("OEP_test                     ", OEP_test);
+    tc.add("full_OEP_test                ", full_OEP_test);
 });

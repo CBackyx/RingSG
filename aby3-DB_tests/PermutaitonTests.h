@@ -7,3 +7,6 @@ void Perm3p_subset_Test();
 void switch_select_test(); 
 void switch_duplicate_test();
 void switch_full_test();
+
+void OEP_test();
+void full_OEP_test();
