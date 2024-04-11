@@ -78,7 +78,7 @@ namespace aby3
         Sh3Task localPackedBinary(Sh3Task dep, const i64Matrix& m, sPackedBin& dest);
 
         Sh3Task localPackedBinary(Sh3Task dep, oc::MatrixView<u8> m, sPackedBin& dest, bool transpose);
-
+        Sh3Task localPackedBinary(Sh3Task dep, oc::MatrixView<u8> m, u64 bitCount, sPackedBin & dest);
 
         // generates a sPackedBin from the given matrix.
         void remotePackedBinary(CommPkg& comm, sPackedBin& dest);
@@ -156,7 +156,9 @@ namespace aby3
         Sh3Task reveal(Sh3Task dep, u64 partyIdx, const sPackedBin& x);
 
         Sh3Task reveal(Sh3Task dep, const sPackedBin& x, PackedBin& dest);
+        Sh3Task reveal(Sh3Task dep, const sPackedBin & A, oc::Matrix<u8>& r);
         Sh3Task revealAll(Sh3Task dep, const sPackedBin& x, PackedBin& dest);
+        Sh3Task revealAll(Sh3Task dep, const sPackedBin& A, oc::Matrix<u8>& r);
 
         void rand(si64Matrix& dest);
         void rand(sbMatrix& dest);

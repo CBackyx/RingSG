@@ -6,6 +6,9 @@
 #include <random>
 #include "cryptoTools/Crypto/PRNG.h"
 
+#include <cryptoTools/Circuit/BetaLibrary.h>
+#include <iomanip>
+
 using namespace oc;
 using namespace aby3;
 
@@ -127,6 +130,53 @@ std::array<oc::Matrix<i64>, 3> getShares(sbMatrix& S, Sh3Runtime& rt, CommPkg& c
 
 }
 
+void get_multiplex_Circ(
+    BetaCircuit& cd,
+    u64 elementSize
+) {
+    BetaLibrary lib;
+
+    BetaBundle a(elementSize);
+    BetaBundle b(elementSize);
+    BetaBundle c(1);
+    BetaBundle d(elementSize);
+    BetaBundle temp(elementSize);
+
+    cd.addInputBundle(a);
+    cd.addInputBundle(b);
+    cd.addInputBundle(c);
+    cd.addOutputBundle(d);
+    cd.addTempWireBundle(temp);
+
+    lib.multiplex_build(
+		cd,
+		a,
+		b,
+		c,
+		d,
+		temp
+    );
+}
+
+void run_OGA(
+    Channel& prevChl,
+    Channel& nextChl,
+    int pIdx,
+    std::vector<u64> groupId, 
+    oc::Matrix<u8> input,
+    oc::MatrixView<u8> output,
+    BetaCircuit* mergeCir
+) {
+    // CommPkg comm = {prevChl, nextChl};
+    // cir->levelByAndDepth();
+    // u64 elementSize = input.cols();
+    // BetaCircuit cd;
+
+
+    //int_int_bitwiseAnd_build(*cd, a, b, c);    
+
+}
+
 void Sh3_BinaryEngine_test(
     BetaCircuit* cir,
     std::function<i64(i64, i64)> binOp,
@@ -161,7 +211,7 @@ void Sh3_BinaryEngine_test(
     debugComm[2] = { comms[2].mPrev.getSession().addChannel(), comms[2].mNext.getSession().addChannel() };
 
     cir->levelByAndDepth();
-    u64 width = 1 << 8;
+    u64 width = 1 << 24;
     bool failed = false;
     //bool manual = false;
 
@@ -218,7 +268,8 @@ void Sh3_BinaryEngine_test(
             eval.enableDebug(pIdx, 0, debugComm[pIdx].mPrev, debugComm[pIdx].mNext);
 #endif
 
-        for (auto mode : { Manual, Auto, Replicated })
+        // for (auto mode : { Manual, Auto, Replicated })
+        for (auto mode : { Manual })
         {
             //eval.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
             //if (pIdx == 0)
@@ -294,7 +345,7 @@ void Sh3_BinaryEngine_test(
                 {
                     while (ac[1] < ac[0]);
                     while (ac[2] < ac[0]);
-
+                    printf("Here1\n");
                     auto& oo = oc::lout;
                     oo << "pidx: " << rt.mPartyIdx << " check\n";
                     oo << "      a " << A.mShares[0](0) << " " << A.mShares[1](0) << std::endl;
@@ -332,6 +383,7 @@ void Sh3_BinaryEngine_test(
 
 void Sh3_BinaryEngine_and_test()
 {
+    printf("Here\n");
 
     BetaLibrary lib;
     u64 size = 8;
@@ -341,60 +393,213 @@ void Sh3_BinaryEngine_and_test()
         auto cir = lib.int_int_bitwiseAnd(size, size, size);
         cir->levelByAndDepth();
 
-        Sh3_BinaryEngine_test(cir, [](i64 a, i64 b) {return a & b; }, true, "AND", mask);
+        // Sh3_BinaryEngine_test(cir, [](i64 a, i64 b) {return a & b; }, true, "AND", mask);
         Sh3_BinaryEngine_test(cir, [](i64 a, i64 b) {return a & b; }, false, "AND", mask);
     }
 
 
 
-    // na_and
+    // // na_and
+    // {
+    //     BetaCircuit cd;
+
+    //     BetaBundle a(size);
+    //     BetaBundle b(size);
+    //     BetaBundle c(size);
+
+    //     cd.addInputBundle(a);
+    //     cd.addInputBundle(b);
+    //     cd.addOutputBundle(c);
+
+    //     //int_int_bitwiseAnd_build(*cd, a, b, c);
+    //     for (u64 j = 0; j < c.mWires.size(); ++j)
+    //     {
+    //         cd.addGate(
+    //             a.mWires[j],
+    //             b.mWires[j],
+    //             GateType::na_And,
+    //             c.mWires[j]);
+    //     }
+
+
+    //     Sh3_BinaryEngine_test(&cd, [](i64 a, i64 b) {
+    //         return ~a & b;
+    //         }, false, "na_AND", mask);
+
+    // }
+
+
+    // // copy
+    // {
+    //     BetaCircuit cir;
+
+    //     BetaBundle a(size);
+    //     BetaBundle b(size);
+    //     BetaBundle c(size);
+
+    //     cir.addInputBundle(a);
+    //     cir.addInputBundle(b);
+    //     cir.addOutputBundle(c);
+    //     cir.addCopy(a, c);
+
+    //     Sh3_BinaryEngine_test(&cir, [](i64 a, i64 b) {return a; }, true, "copy", mask);
+    //     Sh3_BinaryEngine_test(&cir, [](i64 a, i64 b) {return a; }, false, "copy", mask);
+    // }
+
+
+}
+
+
+void Sh3_BinaryEngine_multiplex_test()
+{
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 byteSize = 8;
+    u64 bitSize = byteSize << 3;
+    BetaCircuit cd;
+    get_multiplex_Circ(cd, bitSize);
+    BetaCircuit *cir = &cd;
+
+    cir->levelByAndDepth();
+    u64 width = 1 << 20;
+    bool failed = false;
+    //bool manual = false;
+
+    std::array < std::vector<oc::Matrix<i64>>, 3> CC;
+    std::array < std::vector<oc::Matrix<i64>>, 3> CC2;
+    Sh3BinaryEvaluator evals[3];
+
+    Matrix<u8> a(width, byteSize), b(width, byteSize), c(width, 1);
+    PRNG prng(ZeroBlock);
+    prng.get(a.data(), a.size());
+    prng.get(b.data(), b.size());
+    for (u64 i = 0; i < (u64)c.rows(); ++i)
     {
-        BetaCircuit cd;
+        c(i, 0) = prng.get<u8>() & 1;
+    }
 
-        BetaBundle a(size);
-        BetaBundle b(size);
-        BetaBundle c(size);
+    auto routine = [&](int pIdx) {
+        //auto i = 0;
+        Matrix<u8> d(width, byteSize);
+        d.setZero();
 
-        cd.addInputBundle(a);
-        cd.addInputBundle(b);
-        cd.addOutputBundle(c);
+        Sh3Runtime rt(pIdx, comms[pIdx]);
 
-        //int_int_bitwiseAnd_build(*cd, a, b, c);
-        for (u64 j = 0; j < c.mWires.size(); ++j)
-        {
-            cd.addGate(
-                a.mWires[j],
-                b.mWires[j],
-                GateType::na_And,
-                c.mWires[j]);
+        sPackedBin A(width, bitSize), B(width, bitSize), C(width, 1), D(width, bitSize);
+
+        Sh3Encryptor enc;
+        enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        auto task = rt.noDependencies();
+
+        if (pIdx == 0) {
+            enc.localPackedBinary(rt.noDependencies(), a, A, true).get();
+        } else {
+            enc.remotePackedBinary(rt.noDependencies(), A).get();
         }
 
+        if (pIdx == 1) {
+            enc.localPackedBinary(rt.noDependencies(), b, B, true).get();
+        } else {
+            enc.remotePackedBinary(rt.noDependencies(), B).get();
+        }
 
-        Sh3_BinaryEngine_test(&cd, [](i64 a, i64 b) {
-            return ~a & b;
-            }, false, "na_AND", mask);
+        if (pIdx == 2) {
+            enc.localPackedBinary(rt.noDependencies(), c, 1, C).get();
+        } else {
+            enc.remotePackedBinary(rt.noDependencies(), C).get();
+        }
 
-    }
+        auto& eval = evals[pIdx];
 
+        eval.mPrng.SetSeed(toBlock(pIdx));
 
-    // copy
-    {
-        BetaCircuit cir;
+        //eval.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+        //if (pIdx == 0)
+        //    oc::lout << "---------------------------------------" << std::endl;
 
-        BetaBundle a(size);
-        BetaBundle b(size);
-        BetaBundle c(size);
+        Sh3ShareGen gen;
+        gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
 
-        cir.addInputBundle(a);
-        cir.addInputBundle(b);
-        cir.addOutputBundle(c);
-        cir.addCopy(a, c);
+        D.mShares[0](0) = 0;
+        D.mShares[1](0) = 0;
 
-        Sh3_BinaryEngine_test(&cir, [](i64 a, i64 b) {return a; }, true, "copy", mask);
-        Sh3_BinaryEngine_test(&cir, [](i64 a, i64 b) {return a; }, false, "copy", mask);
-    }
+        // case Manual:
+        task.get();
+        eval.setCir(cir, width, gen);
+        eval.setInput(0, A);
+        eval.setInput(1, B);
+        eval.setInput(2, C);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, D);
+        
+        // task = eval.asyncEvaluate(task, cir, gen, { &A, &B, &C }, { &D });
 
+        task.get();
 
+        // printf("++ %lu %lu\n", d.rows(), d.cols());
+        enc.revealAll(task, D, d).get();
+
+        for (u64 i = 0; i < width; ++i)
+        {
+            if (c(i, 0) == 1) {
+                for (u64 j = 0; j < byteSize; ++j) {
+                    if (d(i, j) != a(i, j)) {
+                        oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+                            << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                        failed = true;
+                    } else {
+                        // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+                        //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                    }
+                }
+            } else {
+                for (u64 j = 0; j < byteSize; ++j) {
+                    if (d(i, j) != b(i, j)) {
+                        oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+                            << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                        failed = true;
+                    } else {
+                        // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+                        //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                    }
+                }
+            }
+            
+        }
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
 }
 
 

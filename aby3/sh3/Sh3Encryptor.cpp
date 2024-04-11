@@ -398,6 +398,49 @@ namespace aby3
         }).getClosure();
     }
 
+    Sh3Task Sh3Encryptor::localPackedBinary(Sh3Task dep, oc::MatrixView<u8> m, u64 bitCount, sPackedBin & dest)
+    {
+        return dep.then([this, m, &dest, bitCount](CommPkg& comm, Sh3Task& self) {
+            if (bitCount != 1 || m.cols() != 1)
+                throw std::runtime_error(LOCATION);
+            if (dest.bitCount() != bitCount)
+                throw std::runtime_error(LOCATION);
+            if (dest.shareCount() != m.rows())
+                throw std::runtime_error(LOCATION);
+
+            auto bits = sizeof(i64) * 8;
+            auto outRows = dest.bitCount();
+            auto outCols = (dest.shareCount() + bits - 1) / bits;
+            oc::MatrixView<u8> out((u8*)dest.mShares[0].data(), outRows, outCols * sizeof(i64));
+            u8 mask = ~((~0) << bitCount);
+
+            // memcpy(out.data(), m.data(), m.size());
+            out.setZero();
+            u8* destData = out.data();
+            u8* srcData = m.data();
+            u64 offset = 0;
+            for (u64 i = 0; i < m.size(); ++i) {
+                u64 destIndex = (offset >> 3);
+                u64 offsetInsideByte = (offset & u64(7));
+                destData[destIndex] ^= ((srcData[i] & mask) << offsetInsideByte);
+                if (offsetInsideByte + bitCount > 8) {
+                    destData[destIndex + 1] ^= ((srcData[i] & mask) >> (offsetInsideByte + bitCount - 8));
+                }
+                offset += bitCount;
+            }
+
+            for (u64 i = 0; i < dest.mShares[0].size(); ++i)
+                dest.mShares[0](i) = dest.mShares[0](i) ^ mShareGen.getBinaryShare();
+
+            comm.mNext.asyncSendCopy(dest.mShares[0].data(), dest.mShares[0].size());
+            auto fu = comm.mPrev.asyncRecv(dest.mShares[1].data(), dest.mShares[1].size());
+
+            self.then([fu = std::move(fu)](CommPkg& comm, Sh3Task& self) mutable {
+                fu.get();
+            });
+        }).getClosure();
+    }
+
     void Sh3Encryptor::remotePackedBinary(CommPkg & comm, sPackedBin & dest)
     {
         for (u64 i = 0; i < dest.mShares[0].size(); ++i)
@@ -695,6 +738,13 @@ namespace aby3
         return reveal(dep, A, r);
     }
 
+    Sh3Task Sh3Encryptor::revealAll(Sh3Task dep, const sPackedBin& A, oc::Matrix<u8>& r)
+    {
+
+        reveal(dep, (mPartyIdx + 2) % 3, A);
+        return reveal(dep, A, r);
+    }
+
 
     Sh3Task Sh3Encryptor::reveal(Sh3Task dep, const sPackedBin & A, PackedBin & r)
     {
@@ -709,6 +759,48 @@ namespace aby3
             {
                 r.mData(i) = r.mData(i) ^ A.mShares[0](i) ^ A.mShares[1](i);
             }
+        });
+    }
+
+    Sh3Task Sh3Encryptor::reveal(Sh3Task dep, const sPackedBin & A, oc::Matrix<u8>& r)
+    {
+        return dep.then([&A, &r](CommPkg& comm, Sh3Task&  self)
+        {
+            if (r.rows() != A.mShareCount || r.cols() != (A.bitCount() >> 3) || (A.bitCount() & 7) != 0) {
+                printf("%lu %lu, %lu %lu\n", r.rows(), A.mShareCount, r.cols(), A.bitCount());
+                throw std::runtime_error(LOCATION);
+            }
+
+            auto wordWidth = (A.bitCount() + 8 * sizeof(i64) - 1) / (8 * sizeof(i64));
+            i64Matrix buff;
+            buff.resize(A.bitCount(), A.simdWidth());
+            r.resize(A.mShareCount, wordWidth * sizeof(i64));
+
+            comm.mNext.recv(buff.data(), buff.size());
+
+
+            for (i64 i = 0; i < buff.size(); ++i)
+            {
+                buff(i) = buff(i) ^ A.mShares[0](i) ^ A.mShares[1](i);
+            }
+
+            // printf("Here-\n");
+
+            r.setZero();
+            oc::MatrixView<u8> bb((u8*)buff.data(), A.bitCount(), A.simdWidth() * sizeof(i64));
+            transpose(bb, r);
+            r.resize(A.mShareCount, A.bitCount() >> 3);
+
+            // printf(">> %lu %lu\n", A.mShares[0].size(), r.size());
+            // printf(">> %lu %lu\n", A.mShareCount, A.bitCount());
+            // comm.mNext.recv(r.data(), r.size());
+
+
+            // for (u64 i = 0; i < r.size(); ++i)
+            // {
+            //     r.data()[i] = r.data()[i] ^ A.mShares[0](i) ^ A.mShares[1](i);
+            // }
+            // printf("Here+\n");
         });
     }
 
