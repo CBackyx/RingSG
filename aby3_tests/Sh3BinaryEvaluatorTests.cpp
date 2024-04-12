@@ -158,20 +158,218 @@ void get_multiplex_Circ(
     );
 }
 
+void getOGAMergeSequences(
+    u64 size,
+    std::vector<std::array<std::vector<u64>, 2>>& seqs
+) {
+    seqs.clear();
+    size_t curSize = size;
+    u64 step = 1;
+    while (curSize > 1) {
+        std::array<std::vector<u64>, 2> curSeq;
+        for (u64 i = 0; i < size - step; i += 2 * step) {
+            curSeq[0].push_back(i);
+            curSeq[1].push_back(i + step);
+        }
+        seqs.push_back(curSeq);
+        step *= 2;
+        curSize = size / 2;
+    }
+}
+
+void getOGAMergeRelativeSequences(
+    u64 size,
+    std::vector<std::array<std::vector<u64>, 2>>& seqs
+) {
+    seqs.clear();
+    size_t curSize = size;
+    u64 step = 1;
+    while (curSize > 1) {
+        std::array<std::vector<u64>, 2> curSeq;
+        for (u64 i = 0; i < curSize - 1; i += 2) {
+            curSeq[0].push_back(i);
+            curSeq[1].push_back(i + 1);
+        }
+        seqs.push_back(curSeq);
+        curSize /= 2;
+    }
+}
+
+void getMergeIndicators(
+    const std::vector<u64>& groupId,
+    const std::vector<std::array<std::vector<u64>, 2>>& seqs,
+    std::vector<std::vector<u8>>& indicators
+) {
+    u64 numSeq = seqs.size();
+    indicators.clear();
+    for (u64 i = 0; i < numSeq; ++i) {
+        std::vector<u8> curInd(seqs[i][0].size(), 0);
+        for (u64 j = 0; j < curInd.size(); ++j) {
+            if (groupId[seqs[i][0][j]] == groupId[seqs[i][1][j]]) curInd[j] = 1;
+        }
+        indicators.push_back(curInd);
+    }
+}
+
+void get_OGA_Circ(
+    BetaCircuit& cd,
+    u64 num,
+    u64 size
+) {
+    BetaLibrary lib;
+    // Get OGA sequence first
+    std::vector<std::array<std::vector<u64>, 2>> seqs;
+    std::vector<std::array<std::vector<u64>, 2>> relaSeqs;
+    getOGAMergeSequences(num, seqs);
+    getOGAMergeSequences(num, relaSeqs);
+    u64 rounds = seqs.size();
+
+    std::vector<BetaBundle> input(num);
+    std::vector<BetaBundle> output(num);
+    std::vector<std::vector<BetaBundle>> inds(rounds);
+    std::vector<std::vector<BetaBundle>> mergeTemps(rounds);
+    std::vector<std::vector<BetaBundle>> muxTemps(rounds);
+    std::vector<std::vector<BetaBundle>> temps(rounds);
+    for (u64 i = 0; i < num; ++i) {
+        input[i].mWires.resize(size);
+        // inds[i].mWires.resize(1);
+        cd.addInputBundle(input[i]);
+        cd.addOutputBundle(output[i]);
+    }
+    for (u64 i = 0; i < rounds; ++i) {
+        inds[i].resize(seqs[i][0].size());
+        mergeTemps[i].resize(seqs[i][0].size());
+        muxTemps[i].resize(seqs[i][0].size());
+        temps[i].resize(seqs[i][0].size());
+        for (u64 j = 0; j < inds[i].size(); ++j) {
+            inds[i][j].mWires.resize(1);
+            mergeTemps[i][j].mWires.resize(size);
+            muxTemps[i][j].mWires.resize(size);
+            temps[i][j].mWires.resize(size);
+            cd.addInputBundle(inds[i][j]);
+            cd.addTempWireBundle(mergeTemps[i][j]);
+            cd.addTempWireBundle(muxTemps[i][j]);
+            cd.addTempWireBundle(temps[i][j]);
+        }
+    } 
+    
+    for (u64 i = 0; i < rounds; ++i) {
+        for (int j = 0; j < relaSeqs[i][0].size(); ++j) {
+            if (i == 0) {
+                lib.bitwiseOr_build(cd, input[relaSeqs[i][0][j]], input[relaSeqs[i][1][j]], mergeTemps[i][j]);
+                lib.multiplex_build(cd, mergeTemps[i][j], input[relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]);
+                cd.addCopy(input[relaSeqs[i][1][j]], output[seqs[i][1][j]]);
+            } else {
+                lib.bitwiseOr_build(cd, muxTemps[i-1][relaSeqs[i][0][j]], muxTemps[i-1][relaSeqs[i][1][j]], mergeTemps[i][j]);
+                lib.multiplex_build(cd, mergeTemps[i][j], muxTemps[i-1][relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]); 
+                cd.addCopy(muxTemps[i-1][relaSeqs[i][1][j]], output[seqs[i][1][j]]);               
+            }
+        }
+    }
+}
+
+// void evalConditionalMerge(
+//     const sPackedBin& A,
+//     const sPackedBin& B,
+//     const sPackedBin& C,
+//     sPackedBin& D
+//     u64 width,
+//     u64 elementSize,
+//     BetaCircuit* mergeCir,
+//     BetaCircuit* multiplexCir,
+//     Sh3BinaryEvaluator& eval
+//     Sh3ShareGen& gen
+// ) {
+//     // Merge
+//     sPackedBin merged(width, bitSize);
+//     eval.setCir(mergeCir, width, gen);
+//     eval.setInput(0, A);
+//     eval.setInput(1, B);
+//     eval.asyncEvaluate(rt.noDependencies()).get();
+//     eval.getOutput(0, merged);
+
+//     // Multiplex
+//     eval.setCir(multiplexCir, width, gen);
+//     eval.setInput(0, merged);
+//     eval.setInput(1, A);
+//     eval.setInput(2, C);
+//     eval.asyncEvaluate(rt.noDependencies()).get();
+//     eval.getOutput(0, D);
+// }
+
 void run_OGA(
     Channel& prevChl,
     Channel& nextChl,
     int pIdx,
     std::vector<u64> groupId, 
     oc::Matrix<u8> input,
-    oc::MatrixView<u8> output,
+    oc::Matrix<u8>& output,
     BetaCircuit* mergeCir
 ) {
-    // CommPkg comm = {prevChl, nextChl};
-    // cir->levelByAndDepth();
-    // u64 elementSize = input.cols();
-    // BetaCircuit cd;
+    u64 size = groupId.size();
+    if (size != input.rows()) {
+        printf("Unequal sizes of groupId and input!\n");
+        exit(-1);
+    }
 
+    // Get OGA sequence first
+    std::vector<std::array<std::vector<u64>, 2>> seqs;
+    getOGAMergeSequences(size, seqs);
+    std::vector<std::vector<u8>> inds;
+    getMergeIndicators(groupId, seqs, inds);
+    u64 rounds = inds.size();
+
+    // Convert input to secret form
+    CommPkg comm = {prevChl, nextChl};
+    Sh3Runtime rt(pIdx, comm);
+    Sh3Encryptor enc;
+    enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+    Sh3BinaryEvaluator eval;    
+    eval.mPrng.SetSeed(toBlock(pIdx));
+    Sh3ShareGen gen;
+    gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+    u64 byteSize = input.cols();
+    u64 bitSize = byteSize << 3;
+    u64 width = size;
+    std::vector<Matrix<u8>> plainInds(rounds);
+    for (u64 i = 0; i < rounds; ++i) {
+        plainInds[i].resize(inds[i].size(), 1);
+        memcpy(plainInds[i].data(), inds[i].data(), inds[i].size());
+        // for (u64 j = 0; j < inds[i].size(); ++j) {
+        //     plainInds[i](j, 0) = inds[i][j];
+        // }
+    }
+    sPackedBin sInput(width, bitSize);
+    std::vector<sPackedBin> sInds(rounds);
+    for (u64 i = 0; i < rounds; ++i) {
+        sInds[i].reset(inds[i].size(), 1);
+    }
+    
+    if (pIdx == 0 || pIdx == 1) {
+        enc.localPackedBinary(rt.noDependencies(), input, sInput, true).get();
+    } else {
+        enc.remotePackedBinary(rt.noDependencies(), sInput).get();
+    } 
+
+    if (pIdx == 0) {
+        for (u64 i = 0; i < rounds; ++i) {
+            enc.localPackedBinary(rt.noDependencies(), plainInds[i], 1, sInds[i]).get();  
+        } 
+    } else {
+        for (u64 i = 0; i < rounds; ++i) {
+            enc.remotePackedBinary(rt.noDependencies(), sInds[i]).get();  
+        } 
+    }   
+
+    // Write a conditional merge function
+    BetaCircuit cd;
+    get_multiplex_Circ(cd, bitSize);
+    BetaCircuit *multiplexCir = &cd;
+    mergeCir->levelByAndDepth();
+    multiplexCir->levelByAndDepth();
+
+    // Execute the conditional merge function for each party of the sequence
 
     //int_int_bitwiseAnd_build(*cd, a, b, c);    
 
@@ -476,11 +674,7 @@ void Sh3_BinaryEngine_multiplex_test()
 
     u64 byteSize = 8;
     u64 bitSize = byteSize << 3;
-    BetaCircuit cd;
-    get_multiplex_Circ(cd, bitSize);
-    BetaCircuit *cir = &cd;
 
-    cir->levelByAndDepth();
     u64 width = 1 << 20;
     bool failed = false;
     //bool manual = false;
@@ -499,6 +693,13 @@ void Sh3_BinaryEngine_multiplex_test()
     }
 
     auto routine = [&](int pIdx) {
+
+        BetaCircuit cd;
+        get_multiplex_Circ(cd, bitSize);
+        BetaCircuit *cir = &cd;
+
+        cir->levelByAndDepth();
+
         //auto i = 0;
         Matrix<u8> d(width, byteSize);
         d.setZero();
