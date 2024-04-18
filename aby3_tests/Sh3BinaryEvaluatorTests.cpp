@@ -103,6 +103,17 @@ using namespace aby3;
 //    }
 //}
 
+template <typename T>
+void print_vector(const std::vector<T>& v, size_t num = 0) {
+  size_t cnt = 0;
+  for (auto elem : v) {
+    if (num != 0 && cnt >= num) break;
+    oc::lout << elem << " ";
+    cnt++;
+  }
+  oc::lout << "\n";
+}
+
 std::array<oc::Matrix<i64>, 3> getShares(sbMatrix& S, Sh3Runtime& rt, CommPkg& comm)
 {
     std::array<oc::Matrix<i64>, 3> r;
@@ -173,7 +184,7 @@ void getOGAMergeSequences(
         }
         seqs.push_back(curSeq);
         step *= 2;
-        curSize = size / 2;
+        curSize /= 2;
     }
 }
 
@@ -214,29 +225,43 @@ void getMergeIndicators(
 void get_OGA_Circ(
     BetaCircuit& cd,
     u64 num,
-    u64 size
+    u64 size,
+    int pIdx
 ) {
     BetaLibrary lib;
     // Get OGA sequence first
     std::vector<std::array<std::vector<u64>, 2>> seqs;
     std::vector<std::array<std::vector<u64>, 2>> relaSeqs;
     getOGAMergeSequences(num, seqs);
-    getOGAMergeSequences(num, relaSeqs);
+    getOGAMergeRelativeSequences(num, relaSeqs);
     u64 rounds = seqs.size();
 
-    std::vector<BetaBundle> input(num);
-    std::vector<BetaBundle> output(num);
+    std::vector<BetaBundle> inputs(num);
+    std::vector<BetaBundle> outputs(num);
     std::vector<std::vector<BetaBundle>> inds(rounds);
     std::vector<std::vector<BetaBundle>> mergeTemps(rounds);
     std::vector<std::vector<BetaBundle>> muxTemps(rounds);
     std::vector<std::vector<BetaBundle>> temps(rounds);
+
+    // BetaBundle t1(size), t2(size), t3(size), t4(size), t5(size);
+    // cd.addInputBundle(t1);
+    // cd.addInputBundle(t2);
+    // cd.addInputBundle(t3);
+    // cd.addInputBundle(t4);
+    // cd.addInputBundle(t5);
     for (u64 i = 0; i < num; ++i) {
-        input[i].mWires.resize(size);
-        // inds[i].mWires.resize(1);
-        cd.addInputBundle(input[i]);
-        cd.addOutputBundle(output[i]);
+        inputs[i].mWires.resize(size);
+        cd.addInputBundle(inputs[i]);
     }
+
     for (u64 i = 0; i < rounds; ++i) {
+        // if (pIdx == 0) {
+        //     print_vector(seqs[i][0]);
+        //     print_vector(seqs[i][1]);
+        //     print_vector(relaSeqs[i][0]);
+        //     print_vector(relaSeqs[i][1]);
+        // }
+
         inds[i].resize(seqs[i][0].size());
         mergeTemps[i].resize(seqs[i][0].size());
         muxTemps[i].resize(seqs[i][0].size());
@@ -253,19 +278,28 @@ void get_OGA_Circ(
         }
     } 
     
-    for (u64 i = 0; i < rounds; ++i) {
-        for (int j = 0; j < relaSeqs[i][0].size(); ++j) {
-            if (i == 0) {
-                lib.bitwiseOr_build(cd, input[relaSeqs[i][0][j]], input[relaSeqs[i][1][j]], mergeTemps[i][j]);
-                lib.multiplex_build(cd, mergeTemps[i][j], input[relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]);
-                cd.addCopy(input[relaSeqs[i][1][j]], output[seqs[i][1][j]]);
-            } else {
-                lib.bitwiseOr_build(cd, muxTemps[i-1][relaSeqs[i][0][j]], muxTemps[i-1][relaSeqs[i][1][j]], mergeTemps[i][j]);
-                lib.multiplex_build(cd, mergeTemps[i][j], muxTemps[i-1][relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]); 
-                cd.addCopy(muxTemps[i-1][relaSeqs[i][1][j]], output[seqs[i][1][j]]);               
-            }
-        }
-    }
+    for (u64 i = 0; i < num; ++i) {
+        outputs[i].mWires.resize(size);
+        cd.addOutputBundle(outputs[i]);
+    }    
+
+    for (u64 i = 0; i < num; ++i) {
+        cd.addCopy(inputs[i], outputs[i]);
+    }    
+
+    // for (u64 i = 0; i < rounds; ++i) {
+    //     for (int j = 0; j < relaSeqs[i][0].size(); ++j) {
+    //         if (i == 0) {
+    //             lib.bitwiseOr_build(cd, inputs[relaSeqs[i][0][j]], inputs[relaSeqs[i][1][j]], mergeTemps[i][j]);
+    //             lib.multiplex_build(cd, mergeTemps[i][j], inputs[relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]);
+    //             cd.addCopy(inputs[relaSeqs[i][1][j]], outputs[seqs[i][1][j]]);
+    //         } else {
+    //             lib.bitwiseOr_build(cd, muxTemps[i-1][relaSeqs[i][0][j]], muxTemps[i-1][relaSeqs[i][1][j]], mergeTemps[i][j]);
+    //             lib.multiplex_build(cd, mergeTemps[i][j], muxTemps[i-1][relaSeqs[i][0][j]], inds[i][j], muxTemps[i][j], temps[i][j]); 
+    //             cd.addCopy(muxTemps[i-1][relaSeqs[i][1][j]], outputs[seqs[i][1][j]]);               
+    //         }
+    //     }
+    // }
 }
 
 // void evalConditionalMerge(
@@ -303,8 +337,7 @@ void run_OGA(
     int pIdx,
     std::vector<u64> groupId, 
     oc::Matrix<u8> input,
-    oc::Matrix<u8>& output,
-    BetaCircuit* mergeCir
+    oc::Matrix<u8>& output
 ) {
     u64 size = groupId.size();
     if (size != input.rows()) {
@@ -332,47 +365,210 @@ void run_OGA(
     u64 byteSize = input.cols();
     u64 bitSize = byteSize << 3;
     u64 width = size;
-    std::vector<Matrix<u8>> plainInds(rounds);
+
+    std::vector<std::vector<Matrix<u8>>> plainInds(rounds);
     for (u64 i = 0; i < rounds; ++i) {
-        plainInds[i].resize(inds[i].size(), 1);
-        memcpy(plainInds[i].data(), inds[i].data(), inds[i].size());
+        plainInds[i].resize(inds[i].size());
+        for (u64 j = 0; j < plainInds[i].size(); ++j) {
+            plainInds[i][j].resize(1, 1);
+            plainInds[i][j](0, 0) = inds[i][j];
+        }
+        // memcpy(plainInds[i].data(), inds[i].data(), inds[i].size());
         // for (u64 j = 0; j < inds[i].size(); ++j) {
         //     plainInds[i](j, 0) = inds[i][j];
         // }
     }
-    sPackedBin sInput(width, bitSize);
-    std::vector<sPackedBin> sInds(rounds);
-    for (u64 i = 0; i < rounds; ++i) {
-        sInds[i].reset(inds[i].size(), 1);
+    std::vector<Matrix<u8>> plainInput(width);
+    std::vector<Matrix<u8>> plainOutput(width);
+    for (u64 i = 0; i < width; ++i) {
+        plainInput[i].resize(1, byteSize);
+        plainOutput[i].resize(1, byteSize);
+        for (u64 j = 0; j < byteSize; ++j) {
+            plainInput[i](0, j) = input(i, j);
+        }
     }
+
+    std::vector<sPackedBin> sInput(width);
+    std::vector<sPackedBin> sOutput(width);
+    std::vector<std::vector<sPackedBin>> sInds(rounds);
+    for (u64 i = 0; i < width; ++i) {
+        sInput[i].reset(1, bitSize);
+        sOutput[i].reset(1, bitSize);
+    }
+    for (u64 i = 0; i < rounds; ++i) {
+        sInds[i].resize(inds[i].size());
+        for (u64 j = 0; j < inds[i].size(); ++j) {
+            sInds[i][j].reset(1, 1);
+        }
+    }
+
+    auto task = rt.noDependencies();
+    
+    // oc::lout << "here " << pIdx << " H1.-1" <<  std::endl;
     
     if (pIdx == 0 || pIdx == 1) {
-        enc.localPackedBinary(rt.noDependencies(), input, sInput, true).get();
+        for (u64 i = 0; i < width; ++i)
+            task = enc.localPackedBinary(task, plainInput[i], sInput[i], true);
     } else {
-        enc.remotePackedBinary(rt.noDependencies(), sInput).get();
+        for (u64 i = 0; i < width; ++i)
+            task = enc.remotePackedBinary(task, sInput[i]);
     } 
 
     if (pIdx == 0) {
         for (u64 i = 0; i < rounds; ++i) {
-            enc.localPackedBinary(rt.noDependencies(), plainInds[i], 1, sInds[i]).get();  
+            for (u64 j = 0; j < inds[i].size(); ++j)
+                task = enc.localPackedBinary(task, plainInds[i][j], 1, sInds[i][j]);  
         } 
     } else {
         for (u64 i = 0; i < rounds; ++i) {
-            enc.remotePackedBinary(rt.noDependencies(), sInds[i]).get();  
+            for (u64 j = 0; j < inds[i].size(); ++j)
+                task = enc.remotePackedBinary(task, sInds[i][j]);  
         } 
     }   
+    task.get();
+
+    // oc::lout << "here " << pIdx << " H1.0" <<  std::endl;
 
     // Write a conditional merge function
+
+    // oc::lout << "here " << pIdx << " H1.1" <<  std::endl;
+
+    // get_multiplex_Circ(cd, bitSize);
+    // BetaCircuit *multiplexCir = &cd;
+    // mergeCir->levelByAndDepth();
     BetaCircuit cd;
-    get_multiplex_Circ(cd, bitSize);
-    BetaCircuit *multiplexCir = &cd;
-    mergeCir->levelByAndDepth();
-    multiplexCir->levelByAndDepth();
+    get_OGA_Circ(cd, width, bitSize, pIdx);
+    BetaCircuit *cir = &cd;
+    cir->levelByAndDepth();
 
-    // Execute the conditional merge function for each party of the sequence
+    eval.setCir(cir, 1, gen);
 
-    //int_int_bitwiseAnd_build(*cd, a, b, c);    
+    u64 inputIdx = 0;
+    for (u64 i = 0; i < width; ++i) {
+        eval.setInput(inputIdx++, sInput[i]);
+    }
+    for (u64 i = 0; i < rounds; ++i) {
+        for (u64 j = 0; j < inds[i].size(); ++j)
+            eval.setInput(inputIdx++, sInds[i][j]);
+    }    
 
+    // oc::lout << "here " << pIdx << " H1.2" <<  std::endl;
+
+    eval.asyncEvaluate(rt.noDependencies()).get();
+
+    // oc::lout << "here " << pIdx << " H1.3" <<  std::endl;
+
+    for (u64 i = 0; i < width; ++i)
+        eval.getOutput(i, sOutput[i]);
+
+    for (u64 i = 0; i < width; ++i)
+        task = enc.revealAll(task, sOutput[i], plainOutput[i]);
+    task.get();    
+
+    output.resize(width, byteSize);
+    for (u64 i = 0; i < width; ++i) {
+        for (u64 j = 0; j < byteSize; ++j) {
+            output(i, j) = plainOutput[i](0, j);
+        }
+    }
+}
+
+void Sh3_BinaryEngine_OGA_test()
+{
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 byteSize = 8;
+    u64 bitSize = byteSize << 3;
+
+    u64 width = 1 << 10;
+    bool failed = false;
+    //bool manual = false;
+
+    std::array < std::vector<oc::Matrix<i64>>, 3> CC;
+    std::array < std::vector<oc::Matrix<i64>>, 3> CC2;
+    Sh3BinaryEvaluator evals[3];
+
+    Matrix<u8> value(width, byteSize);
+
+    std::vector<u64> group(width, 0);
+    PRNG prng(ZeroBlock);
+    prng.get(value.data(), value.size());
+    for (u64 i = 0; i < width; ++i) group[i] = prng.get<u8>() % 10;
+
+    auto routine = [&](int pIdx) {
+
+        Matrix<u8> agged(width, byteSize);
+        // oc::lout << "here " << pIdx << " H1" <<  std::endl;
+        run_OGA(
+            comms[pIdx].mPrev,
+            comms[pIdx].mNext,
+            pIdx,
+            group,
+            value,
+            agged
+        );
+        // oc::lout << "here " << pIdx << " H2" <<  std::endl;
+        
+        // for (u64 i = 0; i < width; ++i)
+        // {
+        //     if (c(i, 0) == 1) {
+        //         for (u64 j = 0; j < byteSize; ++j) {
+        //             if (d(i, j) != a(i, j)) {
+        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //                 failed = true;
+        //             } else {
+        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //             }
+        //         }
+        //     } else {
+        //         for (u64 j = 0; j < byteSize; ++j) {
+        //             if (d(i, j) != b(i, j)) {
+        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //                 failed = true;
+        //             } else {
+        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //             }
+        //         }
+        //     }
+            
+        // }
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
 }
 
 void Sh3_BinaryEngine_test(
