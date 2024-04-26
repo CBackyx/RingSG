@@ -8,6 +8,7 @@
 
 #include <cryptoTools/Circuit/BetaLibrary.h>
 #include <iomanip>
+#include <atomic>
 
 using namespace oc;
 using namespace aby3;
@@ -302,52 +303,118 @@ void get_OGA_Circ(
     // }
 }
 
-// void evalConditionalMerge(
-//     const sPackedBin& A,
-//     const sPackedBin& B,
-//     const sPackedBin& C,
-//     sPackedBin& D
-//     u64 width,
-//     u64 elementSize,
-//     BetaCircuit* mergeCir,
-//     BetaCircuit* multiplexCir,
-//     Sh3BinaryEvaluator& eval
-//     Sh3ShareGen& gen
-// ) {
-//     // Merge
-//     sPackedBin merged(width, bitSize);
-//     eval.setCir(mergeCir, width, gen);
-//     eval.setInput(0, A);
-//     eval.setInput(1, B);
-//     eval.asyncEvaluate(rt.noDependencies()).get();
-//     eval.getOutput(0, merged);
+void evalConditionalMerge(
+    const sbMatrix& A,
+    const sbMatrix& B,
+    const sPackedBin& C,
+    sbMatrix& D,
+    u64 width,
+    u64 bitSize,
+    BetaCircuit* mergeCir,
+    BetaCircuit* multiplexCir,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt
+) {
+    // Merge
+    sbMatrix merged(width, bitSize);
+    eval.setCir(mergeCir, width, gen);
+    eval.setInput(0, A);
+    eval.setInput(1, B);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, merged);
 
-//     // Multiplex
-//     eval.setCir(multiplexCir, width, gen);
-//     eval.setInput(0, merged);
-//     eval.setInput(1, A);
-//     eval.setInput(2, C);
-//     eval.asyncEvaluate(rt.noDependencies()).get();
-//     eval.getOutput(0, D);
-// }
+    // Multiplex
+    eval.setCir(multiplexCir, width, gen);
+    eval.setInput(0, merged);
+    eval.setInput(1, A);
+    eval.setInput(2, C);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, D);
+}
+
+// We need a function to convert Matrix<u8> to i64Matrix (and vice versa) here.
+
+void byteMat2intMat(
+    const Matrix<u8>& input,
+    i64Matrix& output
+) {
+    u64 rows = input.rows();
+    u64 byteSize = input.cols();
+    u64 wordSize = (byteSize + 7) / 8;
+    u64 bitSize = byteSize << 3;
+    
+    output.resize(rows, wordSize);
+    oc::MatrixView<u8> out((u8*)output.data(), rows, wordSize * 8);
+    for (u64 i = 0; i < rows; ++i) {
+        for (u64 j = 0; j < byteSize; ++j) out(i, j) = input(i, j);
+        for (u64 j = byteSize; j < wordSize * 8; ++j) out(i, j) = 0;
+    }
+}
+
+void intMat2ByteMat(
+    const i64Matrix&& input,
+    Matrix<u8>& output,
+    u64 byteSize
+) {
+    u64 wordSize = input.cols();
+    if (wordSize != (byteSize + 7) / 8) {
+        printf("Unexpected input byteSize during intMat2ByteMat conversion!\n");
+        exit(-1);
+    }
+    u64 rows = input.rows();
+    output.resize(rows, byteSize);
+    oc::MatrixView<u8> in((u8*)input.data(), rows, wordSize * 8);
+    for (u64 i = 0; i < rows; ++i) {
+        for (u64 j = 0; j < byteSize; ++j) output(i, j) = in(i, j);
+    }    
+}
+
+void sbMatrixExtractFill(
+    const std::vector<u64>& srcIdx,
+    const std::vector<u64>& dstIdx,
+    const sbMatrix& src,
+    sbMatrix& dst
+) {
+    u64 stride = src.mShares[0].cols();
+    if (stride != dst.mShares[0].cols()) {
+        printf("Unequal src stride and dst stride during sbMatrixExtractFill!\n");
+        exit(-1);
+    }
+    if (srcIdx.size() != dstIdx.size()) {
+        printf("Unequal sizes of srcIdx and dstIdx during sbMatrixExtractFill!\n");
+        exit(-1);        
+    }
+    for (u64 i = 0; i < dstIdx.size(); ++i) {
+        for (u64 j = 0; j < stride; ++j) {
+            dst.mShares[0](dstIdx[i], j) = src.mShares[0](srcIdx[i], j);
+            dst.mShares[1](dstIdx[i], j) = src.mShares[1](srcIdx[i], j);
+        }
+    }
+}
 
 void run_OGA(
     Channel& prevChl,
     Channel& nextChl,
     int pIdx,
     std::vector<u64> groupId, 
-    oc::Matrix<u8> input,
-    oc::Matrix<u8>& output
+    i64Matrix input,
+    i64Matrix& output,
+    BetaCircuit* mergeCir
 ) {
-    u64 size = groupId.size();
-    if (size != input.rows()) {
+    u64 wordSize = input.cols();
+    u64 bitSize = wordSize * 64;
+    u64 width = groupId.size();
+    if (width != input.rows()) {
         printf("Unequal sizes of groupId and input!\n");
         exit(-1);
     }
 
     // Get OGA sequence first
     std::vector<std::array<std::vector<u64>, 2>> seqs;
-    getOGAMergeSequences(size, seqs);
+    getOGAMergeSequences(width, seqs);
+    std::vector<std::array<std::vector<u64>, 2>> relaSeqs;
+    getOGAMergeRelativeSequences(width, relaSeqs);
     std::vector<std::vector<u8>> inds;
     getMergeIndicators(groupId, seqs, inds);
     u64 rounds = inds.size();
@@ -362,43 +429,15 @@ void run_OGA(
     Sh3ShareGen gen;
     gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
 
-    u64 byteSize = input.cols();
-    u64 bitSize = byteSize << 3;
-    u64 width = size;
-
-    std::vector<std::vector<Matrix<u8>>> plainInds(rounds);
+    sbMatrix sInput(width, bitSize);
+    sbMatrix sOutput(width, bitSize);
+    std::vector<sPackedBin> sInds(rounds);
+    std::vector<Matrix<u8>> plainInds(rounds); 
     for (u64 i = 0; i < rounds; ++i) {
-        plainInds[i].resize(inds[i].size());
-        for (u64 j = 0; j < plainInds[i].size(); ++j) {
-            plainInds[i][j].resize(1, 1);
-            plainInds[i][j](0, 0) = inds[i][j];
-        }
-        // memcpy(plainInds[i].data(), inds[i].data(), inds[i].size());
-        // for (u64 j = 0; j < inds[i].size(); ++j) {
-        //     plainInds[i](j, 0) = inds[i][j];
-        // }
-    }
-    std::vector<Matrix<u8>> plainInput(width);
-    std::vector<Matrix<u8>> plainOutput(width);
-    for (u64 i = 0; i < width; ++i) {
-        plainInput[i].resize(1, byteSize);
-        plainOutput[i].resize(1, byteSize);
-        for (u64 j = 0; j < byteSize; ++j) {
-            plainInput[i](0, j) = input(i, j);
-        }
-    }
-
-    std::vector<sPackedBin> sInput(width);
-    std::vector<sPackedBin> sOutput(width);
-    std::vector<std::vector<sPackedBin>> sInds(rounds);
-    for (u64 i = 0; i < width; ++i) {
-        sInput[i].reset(1, bitSize);
-        sOutput[i].reset(1, bitSize);
-    }
-    for (u64 i = 0; i < rounds; ++i) {
-        sInds[i].resize(inds[i].size());
+        sInds[i].reset(inds[i].size(), 1);
+        plainInds[i].resize(inds[i].size(), 1);
         for (u64 j = 0; j < inds[i].size(); ++j) {
-            sInds[i][j].reset(1, 1);
+            plainInds[i](j, 0) = inds[i][j];
         }
     }
 
@@ -406,23 +445,20 @@ void run_OGA(
     
     // oc::lout << "here " << pIdx << " H1.-1" <<  std::endl;
     
-    if (pIdx == 0 || pIdx == 1) {
-        for (u64 i = 0; i < width; ++i)
-            task = enc.localPackedBinary(task, plainInput[i], sInput[i], true);
+    // if (pIdx == 0 || pIdx == 1) {
+    if (pIdx == 1) {
+        task = enc.localBinMatrix(task, input, sInput);
     } else {
-        for (u64 i = 0; i < width; ++i)
-            task = enc.remotePackedBinary(task, sInput[i]);
+        task = enc.remoteBinMatrix(task, sInput);
     } 
 
     if (pIdx == 0) {
         for (u64 i = 0; i < rounds; ++i) {
-            for (u64 j = 0; j < inds[i].size(); ++j)
-                task = enc.localPackedBinary(task, plainInds[i][j], 1, sInds[i][j]);  
+            task = enc.localPackedBinary(task, plainInds[i], 1, sInds[i]);  
         } 
     } else {
         for (u64 i = 0; i < rounds; ++i) {
-            for (u64 j = 0; j < inds[i].size(); ++j)
-                task = enc.remotePackedBinary(task, sInds[i][j]);  
+            task = enc.remotePackedBinary(task, sInds[i]);  
         } 
     }   
     task.get();
@@ -432,45 +468,42 @@ void run_OGA(
     // Write a conditional merge function
 
     // oc::lout << "here " << pIdx << " H1.1" <<  std::endl;
-
-    // get_multiplex_Circ(cd, bitSize);
-    // BetaCircuit *multiplexCir = &cd;
-    // mergeCir->levelByAndDepth();
     BetaCircuit cd;
-    get_OGA_Circ(cd, width, bitSize, pIdx);
-    BetaCircuit *cir = &cd;
-    cir->levelByAndDepth();
+    get_multiplex_Circ(cd, bitSize);
+    BetaCircuit *multiplexCir = &cd;
+    // mergeCir->levelByAndDepth();
+    multiplexCir->levelByAndDepth();
 
-    eval.setCir(cir, 1, gen);
-
-    u64 inputIdx = 0;
-    for (u64 i = 0; i < width; ++i) {
-        eval.setInput(inputIdx++, sInput[i]);
+    for (u64 r = 0; r < rounds; ++r) {
+        u64 curWidth = inds[r].size();
+        std::vector<u64> curRange(curWidth, 0);
+        for (u64 i = 0; i < curWidth; ++i) curRange[i] = i;
+        sbMatrix curA(curWidth, bitSize);
+        sbMatrix curB(curWidth, bitSize);
+        sbMatrix curD(curWidth, bitSize);
+        sbMatrixExtractFill(relaSeqs[r][0], curRange, sInput, curA);
+        sbMatrixExtractFill(relaSeqs[r][1], curRange, sInput, curB);
+        evalConditionalMerge(
+            curA,
+            curB,
+            sInds[r],
+            curD,
+            curWidth,
+            bitSize,
+            mergeCir,
+            multiplexCir,
+            eval,
+            gen,
+            rt
+        );
+        sInput = curD;
+        sbMatrixExtractFill(curRange, seqs[r][1], curB, sOutput);
     }
-    for (u64 i = 0; i < rounds; ++i) {
-        for (u64 j = 0; j < inds[i].size(); ++j)
-            eval.setInput(inputIdx++, sInds[i][j]);
-    }    
+    sOutput.mShares[0](0) = sInput.mShares[0](0);
+    sOutput.mShares[1](0) = sInput.mShares[1](0);
 
-    // oc::lout << "here " << pIdx << " H1.2" <<  std::endl;
-
-    eval.asyncEvaluate(rt.noDependencies()).get();
-
-    // oc::lout << "here " << pIdx << " H1.3" <<  std::endl;
-
-    for (u64 i = 0; i < width; ++i)
-        eval.getOutput(i, sOutput[i]);
-
-    for (u64 i = 0; i < width; ++i)
-        task = enc.revealAll(task, sOutput[i], plainOutput[i]);
-    task.get();    
-
-    output.resize(width, byteSize);
-    for (u64 i = 0; i < width; ++i) {
-        for (u64 j = 0; j < byteSize; ++j) {
-            output(i, j) = plainOutput[i](0, j);
-        }
-    }
+    task = enc.revealAll(task, sOutput, output);
+    task.get();
 }
 
 void Sh3_BinaryEngine_OGA_test()
@@ -497,65 +530,89 @@ void Sh3_BinaryEngine_OGA_test()
     comms[1] = { chl10, chl12 };
     comms[2] = { chl21, chl20 };
 
-    u64 byteSize = 8;
-    u64 bitSize = byteSize << 3;
+    u64 wordSize = 1;
+    u64 bitSize = wordSize << 6;
 
-    u64 width = 1 << 10;
-    bool failed = false;
+    u64 width = 1 << 20;
+    std::atomic<bool> failed(false);
     //bool manual = false;
 
     std::array < std::vector<oc::Matrix<i64>>, 3> CC;
     std::array < std::vector<oc::Matrix<i64>>, 3> CC2;
     Sh3BinaryEvaluator evals[3];
 
-    Matrix<u8> value(width, byteSize);
+    i64Matrix value(width, wordSize);
 
     std::vector<u64> group(width, 0);
     PRNG prng(ZeroBlock);
     prng.get(value.data(), value.size());
-    for (u64 i = 0; i < width; ++i) group[i] = prng.get<u8>() % 10;
+    // for (u64 i = 0; i < width; ++i) {
+    //     for (u64 j = 0; j < wordSize; ++j) value(i, j) = i;
+    // }
+    u64 curGroupSize = (1 << 10);
+    u64 curGroupId = 1;
+    u64 groupMember = curGroupSize;
+    for (u64 i = 0; i < width; ++i) {
+        group[i] = curGroupId;
+        groupMember -= 1;
+        if (groupMember == 0) {
+            // curGroupSize += 1;
+            curGroupId += 1;
+            curGroupSize >>= 1;
+            if (curGroupSize == 0) curGroupSize = 1;
+            groupMember = curGroupSize;
+        }
+    }
+    // for (u64 i = 0; i < width; ++i) printf("%lu ", group[i]);
+    // printf("\n");
+    std::vector<u64> aggSlots;
+    i64Matrix gtAgg(width, wordSize);
+    u64 curGroup = group[width - 1];
+    for (u64 j = 0; j < wordSize; ++j) gtAgg(width - 1, j) = value(width - 1, j);
+    for (i64 i = width - 2; i >= 0; --i) {
+        if (curGroup == group[i]) {
+            for (u64 j = 0; j < wordSize; ++j) gtAgg(i, j) = value(i, j) | gtAgg(i + 1, j);
+        } else {
+            for (u64 j = 0; j < wordSize; ++j) gtAgg(i, j) = value(i, j);
+            aggSlots.push_back(i + 1);
+        }
+        curGroup = group[i];
+    }
+    aggSlots.push_back(0);
+
+    BetaLibrary lib;
+    auto andCir = lib.int_int_bitwiseOr(bitSize, bitSize, bitSize);
+    andCir->levelByAndDepth();
 
     auto routine = [&](int pIdx) {
 
-        Matrix<u8> agged(width, byteSize);
+        i64Matrix agged(width, wordSize);
         // oc::lout << "here " << pIdx << " H1" <<  std::endl;
+
         run_OGA(
             comms[pIdx].mPrev,
             comms[pIdx].mNext,
             pIdx,
             group,
             value,
-            agged
+            agged,
+            andCir
         );
         // oc::lout << "here " << pIdx << " H2" <<  std::endl;
         
-        // for (u64 i = 0; i < width; ++i)
-        // {
-        //     if (c(i, 0) == 1) {
-        //         for (u64 j = 0; j < byteSize; ++j) {
-        //             if (d(i, j) != a(i, j)) {
-        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
-        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
-        //                 failed = true;
-        //             } else {
-        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
-        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
-        //             }
-        //         }
-        //     } else {
-        //         for (u64 j = 0; j < byteSize; ++j) {
-        //             if (d(i, j) != b(i, j)) {
-        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
-        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
-        //                 failed = true;
-        //             } else {
-        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
-        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
-        //             }
-        //         }
-        //     }
-            
-        // }
+        for (auto slot : aggSlots)
+        {
+            for (u64 j = 0; j < wordSize; ++j) {
+                if (gtAgg(slot, j) != agged(slot, j)) {
+                    if (pIdx == 0) oc::lout << Color::Red << "pidx: " << pIdx << " failed at " << slot << " " << j << " "
+                        << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;
+                    failed = true;
+                } else {
+                    // if (pIdx == 0) oc::lout << Color::Green << "pidx: " << pIdx << " succeeded at " << slot << " " << j << " "
+                    //     << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;                    
+                }
+            }
+        }
 
     };
 
