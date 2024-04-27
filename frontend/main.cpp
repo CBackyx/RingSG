@@ -2,6 +2,7 @@
 #include <cryptoTools/Common/CLP.h>
 
 #include "aby3_tests/aby3_tests.h"
+#include "aby3-Graph_tests/graph_tests.h"
 #include "eric.h"
 #include "aby3-DB-main.h"
 #include "aby3-DB_tests/UnitTests.h"
@@ -50,6 +51,7 @@ int main(int argc, char** argv)
 			auto tests = tests_cryptoTools::Tests;
 			tests += aby3_tests;
 			tests += DB_tests;
+			tests += graph_tests;
 
 			tests.runIf(cmd);
 			return 0;

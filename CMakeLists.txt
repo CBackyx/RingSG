@@ -76,6 +76,9 @@ add_subdirectory(aby3-DB_tests)
 
 add_subdirectory(aby3_tests)
 
+add_subdirectory(aby3-Graph)
+add_subdirectory(aby3-Graph_tests)
+
 
 add_subdirectory(frontend)
 

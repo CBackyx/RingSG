@@ -25,8 +25,6 @@ oc::TestCollection aby3_tests([](oc::TestCollection& tc) {
     tc.add("Sh3_BinaryEngine_and_test               ", Sh3_BinaryEngine_and_test);
     tc.add("Sh3_BinaryEngine_add_test               ", Sh3_BinaryEngine_add_test);
     tc.add("Sh3_BinaryEngine_add_msb_test;          ", Sh3_BinaryEngine_add_msb_test);
-    tc.add("Sh3_BinaryEngine_multiplex_test;        ", Sh3_BinaryEngine_multiplex_test);
-    tc.add("Sh3_BinaryEngine_OGA_test;              ", Sh3_BinaryEngine_OGA_test);
 
     tc.add("Sh3_convert_b64Matrix_PackedBin_test    ", Sh3_convert_b64Matrix_PackedBin_test);
 
