@@ -360,6 +360,35 @@ void Sh3_Graph_CC_test()
         }    
     }  
 
+    // Initialize graph data
+    // Vertex tag \in {0, 1}
+    // Edges (src, dst)
+    u64 numVertexPerP = 4;
+    u64 numIntraEdgePerP = 4;
+    u64 numInterEdgePerPair = 4;
+    std::vector<u64> numVertexList(numP, numVertexPerP);
+    std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
+    std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numVertexPerP; ++j)
+            vertexIdLists[i][j] = i * numVertexPerP + j;
+    }
+    vertexDataLists[0][0] = 1;
+    std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
+    std::vector<std::vector<std::vector<std::array<u64, 2>>>> edgeLists(numP, std::vector<std::vector<std::array<u64, 2>>>(numP));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            if (i == j) {
+                numEdgeMat[i][j] = numIntraEdgePerP;
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+            } else {
+                numEdgeMat[i][j] = numInterEdgePerPair;
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+            }
+        }
+    }    
+    
+
     // Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
     // Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
     // Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
