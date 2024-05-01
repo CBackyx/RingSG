@@ -71,7 +71,7 @@ void get_OGA_Circ(
     BetaCircuit& cd,
     u64 num,
     u64 size,
-    int pIdx
+    int role
 ) {
     BetaLibrary lib;
     // Get OGA sequence first
@@ -100,7 +100,7 @@ void get_OGA_Circ(
     }
 
     for (u64 i = 0; i < rounds; ++i) {
-        // if (pIdx == 0) {
+        // if (role == 0) {
         //     print_vector(seqs[i][0]);
         //     print_vector(seqs[i][1]);
         //     print_vector(relaSeqs[i][0]);
@@ -207,6 +207,26 @@ void evalConditionalMerge(
     eval.getOutput(0, D);
 }
 
+void evalMerge(
+    const sPackedBin& A,
+    const sPackedBin& B,
+    sPackedBin& D,
+    u64 width,
+    u64 bitSize,
+    BetaCircuit* mergeCir,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt
+) {
+    // Merge
+    sPackedBin merged(width, bitSize);
+    eval.setCir(mergeCir, width, gen);
+    eval.setInput(0, A);
+    eval.setInput(1, B);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, D);
+}
+
 // We need a function to convert Matrix<u8> to i64Matrix (and vice versa) here.
 
 void byteMat2intMat(
@@ -227,7 +247,7 @@ void byteMat2intMat(
 }
 
 void intMat2ByteMat(
-    const i64Matrix&& input,
+    const i64Matrix& input,
     Matrix<u8>& output,
     u64 byteSize
 ) {
@@ -270,11 +290,12 @@ void sbMatrixExtractFill(
 void run_OGA(
     Channel& prevChl,
     Channel& nextChl,
-    int pIdx,
+    int role,
     std::vector<u64> groupId, 
     i64Matrix input,
     i64Matrix& output,
-    BetaCircuit* mergeCir
+    BetaCircuit* mergeCir,
+    bool isRevealAll
 ) {
     u64 wordSize = input.cols();
     u64 bitSize = wordSize * 64;
@@ -295,13 +316,13 @@ void run_OGA(
 
     // Convert input to secret form
     CommPkg comm = {prevChl, nextChl};
-    Sh3Runtime rt(pIdx, comm);
+    Sh3Runtime rt(role, comm);
     Sh3Encryptor enc;
-    enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+    enc.init(role, toBlock(role), toBlock((role + 1) % 3));
     Sh3BinaryEvaluator eval;    
-    eval.mPrng.SetSeed(toBlock(pIdx));
+    eval.mPrng.SetSeed(toBlock(role));
     Sh3ShareGen gen;
-    gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+    gen.init(toBlock(role), toBlock((role + 1) % 3));
 
     sbMatrix sInput(width, bitSize);
     sbMatrix sOutput(width, bitSize);
@@ -317,16 +338,16 @@ void run_OGA(
 
     auto task = rt.noDependencies();
     
-    // oc::lout << "here " << pIdx << " H1.-1" <<  std::endl;
+    // oc::lout << "here " << role << " H1.-1" <<  std::endl;
     
-    if (pIdx == 0 || pIdx == 1) {
-    // if (pIdx == 1) {
+    if (role == 0 || role == 1) {
+    // if (role == 1) {
         task = enc.localBinMatrix(task, input, sInput);
     } else {
         task = enc.remoteBinMatrix(task, sInput);
     } 
 
-    if (pIdx == 0) {
+    if (role == 0) {
         for (u64 i = 0; i < rounds; ++i) {
             task = enc.localPackedBinary(task, plainInds[i], 1, sInds[i]);  
         } 
@@ -337,7 +358,7 @@ void run_OGA(
     }   
     task.get();
 
-    // oc::lout << "here " << pIdx << " H1.1" <<  std::endl;
+    // oc::lout << "here " << role << " H1.1" <<  std::endl;
     BetaCircuit cd;
     get_multiplex_Circ(cd, bitSize);
     BetaCircuit *multiplexCir = &cd;
@@ -372,7 +393,104 @@ void run_OGA(
     sOutput.mShares[0](0) = sInput.mShares[0](0);
     sOutput.mShares[1](0) = sInput.mShares[1](0);
 
-    task = enc.revealAll(task, sOutput, output);
+    if (isRevealAll)
+        task = enc.revealAll(task, sOutput, output);
+    else
+        task = enc.revealToTwoParty(task, sOutput, output);
+    task.get();
+}
+
+void run_ConditionalMerge(
+    Channel& prevChl,
+    Channel& nextChl,
+    int role,
+    const Matrix<u8>& a,
+    const Matrix<u8>& b,
+    const Matrix<u8>& c,
+    Matrix<u8>& d,
+    BetaCircuit* mergeCir,
+    bool isConditional,
+    bool isRevealAll
+) {
+    u64 byteSize = a.cols();
+    u64 bitSize = byteSize * 8;
+    u64 width = a.rows();
+    if (width != b.rows()) {
+        printf("Unequal sizes of a and b during run_ConditionalMerge!\n");
+        exit(-1);
+    }
+
+    // Convert input to secret form
+    CommPkg comm = {prevChl, nextChl};
+    Sh3Runtime rt(role, comm);
+    Sh3Encryptor enc;
+    enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+    Sh3BinaryEvaluator eval;    
+    eval.mPrng.SetSeed(toBlock(role));
+    Sh3ShareGen gen;
+    gen.init(toBlock(role), toBlock((role + 1) % 3));
+
+    sPackedBin A(width, bitSize);
+    sPackedBin B(width, bitSize);
+    sPackedBin D(width, bitSize);
+
+    auto task = rt.noDependencies();
+    
+    if (role == 0 || role == 1) {
+    // if (role == 1) {
+        task = enc.localPackedBinary(task, a, A, true);
+        task = enc.localPackedBinary(task, b, B, true);
+    } else {
+        task = enc.remotePackedBinary(task, A);
+        task = enc.remotePackedBinary(task, B);
+    } 
+
+    task.get();
+
+    if (isConditional) {
+        sPackedBin C(width, 1);
+        if (role == 0) {
+            task = enc.localPackedBinary(task, c, 1, C);  
+        } else {
+            task = enc.remotePackedBinary(task, C);  
+        }   
+        task.get();
+
+        BetaCircuit cd;
+        get_multiplex_Circ(cd, bitSize);
+        BetaCircuit *multiplexCir = &cd;
+
+        evalConditionalMerge(
+            A,
+            B,
+            C,
+            D,
+            width,
+            bitSize,
+            mergeCir,
+            multiplexCir,
+            eval,
+            gen,
+            rt
+        );
+    } else {
+        evalMerge(
+            A,
+            B,
+            D,
+            width,
+            bitSize,
+            mergeCir,
+            eval,
+            gen,
+            rt
+        );
+    }
+
+    if (isRevealAll)
+        task = enc.revealAll(task, D, d);
+    else
+        task = enc.revealToTwoParty(task, D, d);
     task.get();
 }
 

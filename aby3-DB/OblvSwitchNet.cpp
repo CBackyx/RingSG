@@ -184,7 +184,11 @@ namespace osuCrypto
         u64 destSize = destTag.size();
         std::vector<u32> destId(destSize, 0);
         std::unordered_map<u64, u32> tagMap;
-        for (u64 i = 0; i < srcSize; ++i) tagMap[srcTag[i]] = u32(i);
+        for (u64 i = 0; i < srcSize; ++i) {
+            if (tagMap.find(destTag[i]) == tagMap.end()) {
+                tagMap[srcTag[i]] = u32(i);
+            }
+        }
         for (u64 i = 0; i < destSize; ++i) {
             if (auto search = tagMap.find(destTag[i]); search != tagMap.end())
                 destId[i] = search->second;

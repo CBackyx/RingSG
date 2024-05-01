@@ -583,6 +583,23 @@ namespace aby3
         reveal(dep, (mPartyIdx + 2) % 3, x);
         return reveal(dep, x, dest);
     }
+    Sh3Task Sh3Encryptor::revealToTwoParty(Sh3Task dep, const sbMatrix& x, i64Matrix& dest)
+    {
+        u64 pIdx = mPartyIdx;
+        return dep.then([&x, &dest, pIdx](CommPkg& comm, Sh3Task& self) {
+            dest.setZero();
+            if (pIdx == 0) {
+                for (i32 i = 0; i < dest.size(); ++i) {
+                    dest(i) ^= x.mShares[0](i);
+                    dest(i) ^= x.mShares[1](i);
+                }
+            } else if (pIdx == 1) {
+                for (i32 i = 0; i < dest.size(); ++i) {
+                    dest(i) = x.mShares[0](i);
+                }
+            }
+        });
+    }
     Sh3Task Sh3Encryptor::reveal(Sh3Task dep, u64 partyIdx, const sbMatrix& x)
     {
         //TODO("decide if we can move the if outside the call to then(...)");
@@ -801,6 +818,39 @@ namespace aby3
             //     r.data()[i] = r.data()[i] ^ A.mShares[0](i) ^ A.mShares[1](i);
             // }
             // printf("Here+\n");
+        });
+    }
+
+    Sh3Task Sh3Encryptor::revealToTwoParty(Sh3Task dep, const sPackedBin & A, oc::Matrix<u8>& r)
+    {
+        u64 pIdx = mPartyIdx;
+        return dep.then([&A, &r, pIdx](CommPkg& comm, Sh3Task&  self)
+        {
+            if (r.rows() != A.mShareCount || r.cols() != (A.bitCount() >> 3) || (A.bitCount() & 7) != 0) {
+                printf("%lu %lu, %lu %lu\n", r.rows(), A.mShareCount, r.cols(), A.bitCount());
+                throw std::runtime_error(LOCATION);
+            }
+
+            auto wordWidth = (A.bitCount() + 8 * sizeof(i64) - 1) / (8 * sizeof(i64));
+            i64Matrix buff;
+            buff.resize(A.bitCount(), A.simdWidth());
+            r.resize(A.mShareCount, wordWidth * sizeof(i64));
+            buff.setZero();
+
+            if (pIdx == 0) {
+                for (i64 i = 0; i < buff.size(); ++i) {
+                    buff(i) = A.mShares[0](i) ^ A.mShares[1](i);
+                }                
+            } else if (pIdx == 1) {
+                for (i64 i = 0; i < buff.size(); ++i) {
+                    buff(i) = A.mShares[0](i);
+                }                    
+            }
+
+            r.setZero();
+            oc::MatrixView<u8> bb((u8*)buff.data(), A.bitCount(), A.simdWidth() * sizeof(i64));
+            transpose(bb, r);
+            r.resize(A.mShareCount, A.bitCount() >> 3);
         });
     }
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "aby3/sh3/Sh3Encryptor.h"
 #include "aby3/sh3/Sh3BinaryEvaluator.h"
 #include "aby3/Circuit/CircuitLibrary.h"
@@ -11,6 +13,17 @@
 #include <iomanip>
 #include <atomic>
 #include <random>
+
+void byteMat2intMat(
+    const oc::Matrix<aby3::u8>& input,
+    aby3::i64Matrix& output
+);
+
+void intMat2ByteMat(
+    const aby3::i64Matrix& input,
+    oc::Matrix<aby3::u8>& output,
+    aby3::u64 byteSize
+);
 
 void evalConditionalMerge(
     const aby3::sbMatrix& A,
@@ -43,10 +56,24 @@ void evalConditionalMerge(
 void run_OGA(
     oc::Channel& prevChl,
     oc::Channel& nextChl,
-    int pIdx,
+    int role,
     std::vector<aby3::u64> groupId, 
     aby3::i64Matrix input,
     aby3::i64Matrix& output,
-    oc::BetaCircuit* mergeCir
+    oc::BetaCircuit* mergeCir,
+    bool isRevealAll = true
+);
+
+void run_ConditionalMerge(
+    oc::Channel& prevChl,
+    oc::Channel& nextChl,
+    int role,
+    const oc::Matrix<aby3::u8>& a,
+    const oc::Matrix<aby3::u8>& b,
+    const oc::Matrix<aby3::u8>& c,
+    oc::Matrix<aby3::u8>& d,
+    oc::BetaCircuit* mergeCir,
+    bool isConditional,
+    bool isRevealAll = true
 );
 

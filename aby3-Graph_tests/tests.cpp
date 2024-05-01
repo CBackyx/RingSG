@@ -12,8 +12,10 @@
 #include <iomanip>
 #include <atomic>
 #include <string>
+#include <thread>
 
 #include "aby3-Graph/OGA.h"
+#include "aby3-Graph/cc.h"
 
 using namespace oc;
 using namespace aby3;
@@ -465,7 +467,191 @@ void Sh3_Graph_CC_test()
         computeComms[2] = { computeChls[helperDstIdx][5], computeChls[helperDstIdx][3] }; // Helper Comms       
         std::vector<Channel>& delClientChls = delegateClientChls[pIdx];
         std::vector<Channel>& delServerChls = delegateServerChls[pIdx];
+        std::vector<Matrix<u8>> vertexDatas(3);
+        vertexDatas[0].resize(numVertexList[pIdx], 1);
+        vertexDatas[1].resize(numVertexList[serverDstIdx], 1);
+        vertexDatas[2].resize(numVertexList[helperDstIdx], 1);
+        for (u64 i = 0; i < 3; ++i) vertexDatas[i].setZero();
+        for (u64 i = 0; i < numVertexList[pIdx]; ++i) {
+            vertexDatas[0](i, 0) = vertexDataLists[pIdx][i];
+        }
+        std::vector<Matrix<u8>> interUpdateShare1(3);
+        std::vector<Matrix<u8>> interUpdateShare2(3);
 
+        // Load the data to aby3 plaintext data structure
+        // For different characteristics: client, server, helper (maybe in different threads)
+        auto scatterThread = [&](int role, Matrix<u8>& vertexDataShare, Matrix<u8>& updateShare1, Matrix<u8>& updateShare2) {
+            std::vector<u64> srcTag;
+            std::vector<u64> dstTag;
+            Matrix<u8> updateShare;
+            u64 numEdge = 0;
+            int clientPIdx = 0;
+            if (role == 0) clientPIdx = pIdx;
+            else if (role == 1) clientPIdx = serverDstIdx;
+            else if (role == 2) clientPIdx = helperDstIdx;
+            u64 numVertex = numVertexList[clientPIdx];
+            for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[clientPIdx][i];
+            if (role == 2) vertexDataShare.setZero();
+            updateShare.resize(numEdge, 1);
+            updateShare.setZero();
+            srcTag.resize(numVertex);
+            dstTag.resize(numEdge);
+            if (role == 0) {
+                for (u64 i = 0; i < numVertex; ++i) {
+                    srcTag[i] = vertexIdLists[clientPIdx][i];
+                }
+                u64 cnt = 0;
+                for (u64 i = 0; i < numP; ++i) {
+                    for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                        dstTag[cnt++] = edgeLists[clientPIdx][i][j][0];
+                    }
+                }
+            }
+            scatter(
+                computeComms[role].mPrev,
+                computeComms[role].mNext,
+                role,
+                srcTag, 
+                dstTag, 
+                vertexDataShare,
+                updateShare
+            );      
+
+            // Decompose update Share and send    
+            std::vector<Matrix<u8>> updateShares(numP);
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                updateShares[i].resize(numEdgeMat[clientPIdx][i], 1);
+                for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                    updateShares[i](j, 0) = updateShare(cnt++, 0);
+                }
+            }
+            if (role == 0) {
+                updateShare1 = updateShares[clientPIdx];
+                for (int i = 0; i < numP; ++i) {
+                    if (i != clientPIdx) {
+                        if ((i + 1) % numP != pIdx) {
+                            delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        } else {
+                            // Get the server share for P_{pIdx-1}
+                            updateShare2 = updateShares[i];
+                        }
+                    }
+                }
+            } else if (role == 1) {
+                updateShare1 = updateShares[clientPIdx];
+                for (int i = 0; i < numP; ++i) {
+                    if (i != clientPIdx) {
+                        if (i != pIdx) {
+                            delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        } else {
+                            // Get the client share for P_{pIdx}
+                            updateShare2 = updateShares[i];
+                        }
+                    }
+                }                
+            }
+        };
+
+        auto gatherThread = [&](int role, Matrix<u8>& vertexDataShare, const Matrix<u8>& updateShare1, const Matrix<u8>& updateShare2) {
+            Matrix<u8> updatedVertexDataShare = vertexDataShare;
+            updatedVertexDataShare.setZero();
+            std::vector<u64> vertexTag;
+            std::vector<u64> dstTag;
+            Matrix<u8> updateShare;
+            u64 numEdge = 0;
+            int clientPIdx = 0;
+            if (role == 0) clientPIdx = pIdx;
+            else if (role == 1) clientPIdx = serverDstIdx;
+            else if (role == 2) clientPIdx = helperDstIdx;
+            u64 numVertex = numVertexList[clientPIdx];
+            for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[i][clientPIdx];
+            if (role == 2) vertexDataShare.setZero();
+            updateShare.resize(numEdge, 1);
+            updateShare.setZero();
+            vertexTag.resize(numVertex);
+            dstTag.resize(numEdge);
+            // Decompose update Share and send    
+            std::vector<Matrix<u8>> updateShares(numP);
+            for (u64 i = 0; i < numP; ++i) {
+                updateShares[i].resize(numEdgeMat[i][clientPIdx], 1);
+            }
+            if (role == 0) {
+                updateShares[clientPIdx] == updateShare1;
+                for (int i = 0; i < numP; ++i) {
+                    if (i != clientPIdx) {
+                        if ((i + 1) % numP != pIdx) {
+                            delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
+                        } else {
+                            updateShares[i] == updateShare2;
+                        }
+                    }
+                }
+            } else if (role == 1) {
+                updateShares[clientPIdx] == updateShare1;
+                for (int i = 0; i < numP; ++i) {
+                    if (i != clientPIdx) {
+                        if (i != pIdx) {
+                            delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        } else {
+                            updateShares[i] == updateShare2;
+                        }
+                    }
+                }                
+            } 
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                    updateShares[i](j, 0) = updateShare(cnt++, 0);
+                }
+            }  
+            if (role == 0) {
+                for (u64 i = 0; i < numVertex; ++i) {
+                    vertexTag[i] = vertexIdLists[clientPIdx][i];
+                }
+                u64 cnt = 0;
+                for (u64 i = 0; i < numP; ++i) {
+                    for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                        dstTag[cnt++] = edgeLists[i][clientPIdx][j][0];
+                    }
+                }
+            } 
+
+            gather(
+                computeComms[role].mPrev,
+                computeComms[role].mNext,
+                role,
+                dstTag, 
+                vertexTag,
+                updateShare,
+                vertexDataShare,
+                updatedVertexDataShare
+            );        
+            vertexDataShare = updatedVertexDataShare;
+        };
+
+        u64 numIters = 5;
+        for (u64 iter = 0; iter < numIters; ++iter) {
+            std::vector<std::thread> scatterThrds; 
+            for (u64 role = 0; role < 3; ++role) {
+                scatterThrds.emplace_back(scatterThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+            }
+            for (auto& thrd : scatterThrds)
+                thrd.join();
+            std::vector<std::thread> gatherThrds;
+            for (u64 role = 0; role < 3; ++role) {
+                if (role != 2) gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[1 - role]));
+                else gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+            }
+            for (auto& thrd : gatherThrds)
+                thrd.join();            
+        }
+    
+        computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
+        Matrix<u8> serverVertexData(numVertexList[pIdx], 1);
+        serverVertexData.setZero();
+        computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
+        for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
         // i64Matrix agged(width, wordSize);
         // // oc::lout << "here " << pIdx << " H1" <<  std::endl;
         // i64Matrix curValue(width, wordSize);

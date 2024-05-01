@@ -149,6 +149,7 @@ namespace aby3
 
         Sh3Task reveal(Sh3Task dep, const sbMatrix& x, i64Matrix& dest);
         Sh3Task revealAll(Sh3Task dep, const sbMatrix& x, i64Matrix& dest);
+        Sh3Task revealToTwoParty(Sh3Task dep, const sbMatrix& x, i64Matrix& dest);
         Sh3Task reveal(Sh3Task dep, u64 partyIdx, const sbMatrix& x);
 
         Sh3Task reveal(Sh3Task dep, const sPackedBin& x, i64Matrix& dest);
@@ -159,6 +160,7 @@ namespace aby3
         Sh3Task reveal(Sh3Task dep, const sPackedBin & A, oc::Matrix<u8>& r);
         Sh3Task revealAll(Sh3Task dep, const sPackedBin& x, PackedBin& dest);
         Sh3Task revealAll(Sh3Task dep, const sPackedBin& A, oc::Matrix<u8>& r);
+        Sh3Task revealToTwoParty(Sh3Task dep, const sPackedBin & A, oc::Matrix<u8>& r);
 
         void rand(si64Matrix& dest);
         void rand(sbMatrix& dest);
