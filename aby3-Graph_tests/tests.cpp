@@ -342,6 +342,7 @@ void Sh3_Graph_CC_test()
     for (u64 i = 0; i < numP; ++i) {
         for (u64 j = 0; j < numP; ++j) {
             if (i != j) delegateClientChls[i].emplace_back(delegateClientSessions[i][j].addChannel("c"));
+            else delegateClientChls[i].emplace_back(Channel());
         }    
     }    
 
@@ -359,6 +360,7 @@ void Sh3_Graph_CC_test()
     for (u64 i = 0; i < numP; ++i) {
         for (u64 j = 0; j < numP; ++j) {
             if (i != j) delegateServerChls[i].emplace_back(delegateServerSessions[i][j].addChannel("c"));
+            else delegateServerChls[i].emplace_back(Channel());
         }    
     }  
 
@@ -462,7 +464,7 @@ void Sh3_Graph_CC_test()
         u64 serverDstIdx = (pIdx + numP - 1) % numP;
         u64 helperDstIdx = (pIdx + numP - 2) % numP;
         CommPkg computeComms[3];
-        computeComms[0] = { computeChls[pIdx][0], computeChls[pIdx][2] }; // Client Comms
+        computeComms[0] = { computeChls[pIdx][2], computeChls[pIdx][0] }; // Client Comms
         computeComms[1] = { computeChls[serverDstIdx][1], computeChls[serverDstIdx][4] }; // Server Comms
         computeComms[2] = { computeChls[helperDstIdx][5], computeChls[helperDstIdx][3] }; // Helper Comms       
         std::vector<Channel>& delClientChls = delegateClientChls[pIdx];
@@ -531,6 +533,10 @@ void Sh3_Graph_CC_test()
                 for (int i = 0; i < numP; ++i) {
                     if (i != clientPIdx) {
                         if ((i + 1) % numP != pIdx) {
+                            if (!delClientChls[(i + 1) % numP].isConnected()) {
+                                printf("Unexpected Unconnected Channel!\n");
+                                exit(-1);
+                            }
                             delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
                         } else {
                             // Get the server share for P_{pIdx-1}
@@ -543,6 +549,10 @@ void Sh3_Graph_CC_test()
                 for (int i = 0; i < numP; ++i) {
                     if (i != clientPIdx) {
                         if (i != pIdx) {
+                            if (!delServerChls[i].isConnected()) {
+                                printf("Unexpected Unconnected Channel!\n");
+                                exit(-1);
+                            }
                             delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
                         } else {
                             // Get the client share for P_{pIdx}
@@ -617,17 +627,17 @@ void Sh3_Graph_CC_test()
                 }
             } 
 
-            gather(
-                computeComms[role].mPrev,
-                computeComms[role].mNext,
-                role,
-                dstTag, 
-                vertexTag,
-                updateShare,
-                vertexDataShare,
-                updatedVertexDataShare
-            );        
-            vertexDataShare = updatedVertexDataShare;
+            // gather(
+            //     computeComms[role].mPrev,
+            //     computeComms[role].mNext,
+            //     role,
+            //     dstTag, 
+            //     vertexTag,
+            //     updateShare,
+            //     vertexDataShare,
+            //     updatedVertexDataShare
+            // );        
+            // vertexDataShare = updatedVertexDataShare;
         };
 
         u64 numIters = 5;
