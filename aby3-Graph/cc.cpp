@@ -66,8 +66,8 @@ void gather(
     i64Matrix aggedUpdateShare_int(updateShare.rows(), (updateShare.cols() + 7) / 8);
 
     BetaLibrary lib;
-    auto orCir = lib.int_int_bitwiseOr(64, 64, 64);
-    orCir->levelByAndDepth();    
+    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    // orCir->levelByAndDepth();    
     run_OGA(
         prevChl,
         nextChl,
@@ -75,26 +75,39 @@ void gather(
         sortedUpdateTag, 
         unaggedUpdateShare_int,
         aggedUpdateShare_int,
-        orCir,
+        orCir_64,
         false
     );
     Matrix<u8> aggedUpdateShare(updateShare.rows(), updateShare.cols());
     intMat2ByteMat(
         aggedUpdateShare_int,
         aggedUpdateShare,
-        8
+        1
     );
 
+    Matrix<u8> aggedUpdateShareExtracted(vertexShare.rows(), vertexShare.cols());
+    run_OEP(
+        prevChl,
+        nextChl,
+        role,
+        sortedUpdateTag, 
+        vertexTag, 
+        aggedUpdateShare,
+        aggedUpdateShareExtracted        
+    );
+
+    auto orCir_8 = lib.int_int_bitwiseOr(8, 8, 8);
     outputShare.resize(vertexShare.rows(), vertexShare.cols());
+    // printf(">>> %lu %lu %lu\n", aggedUpdateShare.cols(), outputShare.cols(), vertexShare.cols());
     run_ConditionalMerge(
         prevChl,
         nextChl,
         role,
-        outputShare,
+        aggedUpdateShareExtracted,
         vertexShare,
         Matrix<u8>(),
         outputShare,
-        orCir,
+        orCir_8,
         false,
         false        
     );

@@ -219,7 +219,25 @@ void evalMerge(
     Sh3Runtime& rt
 ) {
     // Merge
-    sPackedBin merged(width, bitSize);
+    eval.setCir(mergeCir, width, gen);
+    eval.setInput(0, A);
+    eval.setInput(1, B);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, D);
+}
+
+void evalMerge(
+    const sbMatrix& A,
+    const sbMatrix& B,
+    sbMatrix& D,
+    u64 width,
+    u64 bitSize,
+    BetaCircuit* mergeCir,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt
+) {
+    // Merge
     eval.setCir(mergeCir, width, gen);
     eval.setInput(0, A);
     eval.setInput(1, B);
@@ -400,6 +418,100 @@ void run_OGA(
     task.get();
 }
 
+// void run_ConditionalMerge(
+//     Channel& prevChl,
+//     Channel& nextChl,
+//     int role,
+//     const Matrix<u8>& a,
+//     const Matrix<u8>& b,
+//     const Matrix<u8>& c,
+//     Matrix<u8>& d,
+//     BetaCircuit* mergeCir,
+//     bool isConditional,
+//     bool isRevealAll
+// ) {
+//     u64 byteSize = a.cols();
+//     u64 bitSize = byteSize * 8;
+//     u64 width = a.rows();
+//     if (width != b.rows()) {
+//         printf("Unequal sizes of a and b during run_ConditionalMerge!\n");
+//         exit(-1);
+//     }
+
+//     // Convert input to secret form
+//     CommPkg comm = {prevChl, nextChl};
+//     Sh3Runtime rt(role, comm);
+//     Sh3Encryptor enc;
+//     enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+//     Sh3BinaryEvaluator eval;    
+//     eval.mPrng.SetSeed(toBlock(role));
+//     Sh3ShareGen gen;
+//     gen.init(toBlock(role), toBlock((role + 1) % 3));
+
+//     sPackedBin A(width, bitSize);
+//     sPackedBin B(width, bitSize);
+//     sPackedBin D(width, bitSize);
+
+//     auto task = rt.noDependencies();
+    
+//     if (role == 0 || role == 1) {
+//     // if (role == 1) {
+//         task = enc.localPackedBinary(task, a, A, true);
+//         task = enc.localPackedBinary(task, b, B, true);
+//     } else {
+//         task = enc.remotePackedBinary(task, A);
+//         task = enc.remotePackedBinary(task, B);
+//     } 
+
+//     task.get();
+
+//     if (isConditional) {
+//         sPackedBin C(width, 1);
+//         if (role == 0) {
+//             task = enc.localPackedBinary(task, c, 1, C);  
+//         } else {
+//             task = enc.remotePackedBinary(task, C);  
+//         }   
+//         task.get();
+
+//         BetaCircuit cd;
+//         get_multiplex_Circ(cd, bitSize);
+//         BetaCircuit *multiplexCir = &cd;
+
+//         evalConditionalMerge(
+//             A,
+//             B,
+//             C,
+//             D,
+//             width,
+//             bitSize,
+//             mergeCir,
+//             multiplexCir,
+//             eval,
+//             gen,
+//             rt
+//         );
+//     } else {
+//         evalMerge(
+//             A,
+//             B,
+//             D,
+//             width,
+//             bitSize,
+//             mergeCir,
+//             eval,
+//             gen,
+//             rt
+//         );
+//     }
+
+//     if (isRevealAll)
+//         task = enc.revealAll(task, D, d);
+//     else
+//         task = enc.revealToTwoParty(task, D, d);
+//     task.get();
+// }
+
 void run_ConditionalMerge(
     Channel& prevChl,
     Channel& nextChl,
@@ -414,6 +526,7 @@ void run_ConditionalMerge(
 ) {
     u64 byteSize = a.cols();
     u64 bitSize = byteSize * 8;
+    u64 wordSize = (bitSize + 63) / 64;
     u64 width = a.rows();
     if (width != b.rows()) {
         printf("Unequal sizes of a and b during run_ConditionalMerge!\n");
@@ -430,19 +543,26 @@ void run_ConditionalMerge(
     Sh3ShareGen gen;
     gen.init(toBlock(role), toBlock((role + 1) % 3));
 
-    sPackedBin A(width, bitSize);
-    sPackedBin B(width, bitSize);
-    sPackedBin D(width, bitSize);
+    i64Matrix aa;
+    i64Matrix bb;
+    i64Matrix dd;
+    byteMat2intMat(a, aa);
+    byteMat2intMat(b, bb);
+    dd.resize(a.rows(), wordSize);
+
+    sbMatrix A(width, bitSize);
+    sbMatrix B(width, bitSize);
+    sbMatrix D(width, bitSize);
 
     auto task = rt.noDependencies();
     
     if (role == 0 || role == 1) {
     // if (role == 1) {
-        task = enc.localPackedBinary(task, a, A, true);
-        task = enc.localPackedBinary(task, b, B, true);
+        task = enc.localBinMatrix(task, aa, A);
+        task = enc.localBinMatrix(task, bb, B);
     } else {
-        task = enc.remotePackedBinary(task, A);
-        task = enc.remotePackedBinary(task, B);
+        task = enc.remoteBinMatrix(task, A);
+        task = enc.remoteBinMatrix(task, B);
     } 
 
     task.get();
@@ -488,9 +608,11 @@ void run_ConditionalMerge(
     }
 
     if (isRevealAll)
-        task = enc.revealAll(task, D, d);
+        task = enc.revealAll(task, D, dd);
     else
-        task = enc.revealToTwoParty(task, D, d);
+        task = enc.revealToTwoParty(task, D, dd);
     task.get();
+
+    intMat2ByteMat(dd, d, 1);
 }
 

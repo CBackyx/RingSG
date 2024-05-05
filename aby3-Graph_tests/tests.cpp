@@ -367,9 +367,9 @@ void Sh3_Graph_CC_test()
     // Initialize graph data
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
-    u64 numVertexPerP = 4;
-    u64 numIntraEdgePerP = 4;
-    u64 numInterEdgePerPair = 4;
+    u64 numVertexPerP = (1 << 20);
+    u64 numIntraEdgePerP = (1 << 20);
+    u64 numInterEdgePerPair = (1 << 20);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
@@ -459,6 +459,12 @@ void Sh3_Graph_CC_test()
     // BetaLibrary lib;
     // auto andCir = lib.int_int_bitwiseOr(bitSize, bitSize, bitSize);
     // andCir->levelByAndDepth();
+
+    BetaLibrary lib;
+    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    orCir_64->levelByAndDepth();   
+    auto orCir_8 = lib.int_int_bitwiseOr(8, 8, 8);
+    orCir_8->levelByAndDepth(); 
 
     auto routine = [&](int pIdx) {
         u64 serverDstIdx = (pIdx + numP - 1) % numP;
@@ -627,17 +633,17 @@ void Sh3_Graph_CC_test()
                 }
             } 
 
-            // gather(
-            //     computeComms[role].mPrev,
-            //     computeComms[role].mNext,
-            //     role,
-            //     dstTag, 
-            //     vertexTag,
-            //     updateShare,
-            //     vertexDataShare,
-            //     updatedVertexDataShare
-            // );        
-            // vertexDataShare = updatedVertexDataShare;
+            gather(
+                computeComms[role].mPrev,
+                computeComms[role].mNext,
+                role,
+                dstTag, 
+                vertexTag,
+                updateShare,
+                vertexDataShare,
+                updatedVertexDataShare
+            );        
+            vertexDataShare = updatedVertexDataShare;
         };
 
         u64 numIters = 5;

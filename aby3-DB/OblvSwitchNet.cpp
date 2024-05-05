@@ -185,7 +185,7 @@ namespace osuCrypto
         std::vector<u32> destId(destSize, 0);
         std::unordered_map<u64, u32> tagMap;
         for (u64 i = 0; i < srcSize; ++i) {
-            if (tagMap.find(destTag[i]) == tagMap.end()) {
+            if (tagMap.find(srcTag[i]) == tagMap.end()) {
                 tagMap[srcTag[i]] = u32(i);
             }
         }
