@@ -2,12 +2,15 @@
 #include <algorithm>
 #include <cryptoTools/Circuit/BetaLibrary.h>
 
+#include "utils.h"
+
 using namespace oc;
 using namespace aby3;
 
 void scatter(
     Channel& prevChl,
     Channel& nextChl,
+    int pIdx,
     int role,
     const std::vector<u64>& srcTag, 
     const std::vector<u64>& dstTag, 
@@ -22,12 +25,13 @@ void scatter(
         dstTag, 
         inputShare,
         outputShare        
-    );
+    ); 
 }
 
 void gather(
     Channel& prevChl,
     Channel& nextChl,
+    int pIdx,
     int role,
     const std::vector<u64>& dstTag, 
     const std::vector<u64>& vertexTag,
@@ -61,6 +65,15 @@ void gather(
         updateShare,
         sortedUpdateShare        
     );
+
+    // if (pIdx == 0 && role == 0) {
+    //     print_vector_lock(sortedUpdateTag);
+    //     // print_vector_lock(sortUpdateSrc);
+    //     // print_vector_lock(sortUpdateDst);
+    // }
+
+    // reconstruct_and_print_matrix(sortedUpdateShare, pIdx, role, prevChl, nextChl); 
+
     i64Matrix unaggedUpdateShare_int(updateShare.rows(), (updateShare.cols() + 7) / 8);
     byteMat2intMat(sortedUpdateShare, unaggedUpdateShare_int);
     i64Matrix aggedUpdateShare_int(updateShare.rows(), (updateShare.cols() + 7) / 8);
@@ -111,4 +124,6 @@ void gather(
         false,
         false        
     );
+
+    // reconstruct_and_print_matrix(outputShare, pIdx, role, prevChl, nextChl);
 }

@@ -304,7 +304,7 @@ void Sh3_Graph_OGA_test()
 
 void Sh3_Graph_CC_test()
 {
-    u64 numP = 5;
+    u64 numP = 4;
     std::vector<u64> pIndices(5, 0);
     for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
 
@@ -367,9 +367,9 @@ void Sh3_Graph_CC_test()
     // Initialize graph data
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
-    u64 numVertexPerP = (1 << 20);
-    u64 numIntraEdgePerP = (1 << 20);
-    u64 numInterEdgePerPair = (1 << 20);
+    u64 numVertexPerP = (1 << 2);
+    u64 numIntraEdgePerP = (1 << 2);
+    u64 numInterEdgePerPair = (1 << 2);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
@@ -384,10 +384,12 @@ void Sh3_Graph_CC_test()
         for (u64 j = 0; j < numP; ++j) {
             if (i == j) {
                 numEdgeMat[i][j] = numIntraEdgePerP;
-                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
             } else {
                 numEdgeMat[i][j] = numInterEdgePerPair;
-                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
             }
         }
     }    
@@ -518,6 +520,7 @@ void Sh3_Graph_CC_test()
             scatter(
                 computeComms[role].mPrev,
                 computeComms[role].mNext,
+                pIdx,
                 role,
                 srcTag, 
                 dstTag, 
@@ -593,24 +596,24 @@ void Sh3_Graph_CC_test()
                 updateShares[i].resize(numEdgeMat[i][clientPIdx], 1);
             }
             if (role == 0) {
-                updateShares[clientPIdx] == updateShare1;
+                updateShares[clientPIdx] = updateShare1;
                 for (int i = 0; i < numP; ++i) {
                     if (i != clientPIdx) {
                         if ((i + 1) % numP != pIdx) {
                             delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
                         } else {
-                            updateShares[i] == updateShare2;
+                            updateShares[i] = updateShare2;
                         }
                     }
                 }
             } else if (role == 1) {
-                updateShares[clientPIdx] == updateShare1;
+                updateShares[clientPIdx] = updateShare1;
                 for (int i = 0; i < numP; ++i) {
                     if (i != clientPIdx) {
                         if (i != pIdx) {
                             delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
                         } else {
-                            updateShares[i] == updateShare2;
+                            updateShares[i] = updateShare2;
                         }
                     }
                 }                
@@ -618,7 +621,7 @@ void Sh3_Graph_CC_test()
             u64 cnt = 0;
             for (u64 i = 0; i < numP; ++i) {
                 for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
-                    updateShares[i](j, 0) = updateShare(cnt++, 0);
+                    updateShare(cnt++, 0) = updateShares[i](j, 0);
                 }
             }  
             if (role == 0) {
@@ -628,7 +631,7 @@ void Sh3_Graph_CC_test()
                 u64 cnt = 0;
                 for (u64 i = 0; i < numP; ++i) {
                     for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
-                        dstTag[cnt++] = edgeLists[i][clientPIdx][j][0];
+                        dstTag[cnt++] = edgeLists[i][clientPIdx][j][1];
                     }
                 }
             } 
@@ -636,6 +639,7 @@ void Sh3_Graph_CC_test()
             gather(
                 computeComms[role].mPrev,
                 computeComms[role].mNext,
+                pIdx,
                 role,
                 dstTag, 
                 vertexTag,
@@ -646,7 +650,7 @@ void Sh3_Graph_CC_test()
             vertexDataShare = updatedVertexDataShare;
         };
 
-        u64 numIters = 5;
+        u64 numIters = 1;
         for (u64 iter = 0; iter < numIters; ++iter) {
             std::vector<std::thread> scatterThrds; 
             for (u64 role = 0; role < 3; ++role) {

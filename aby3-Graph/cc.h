@@ -7,6 +7,7 @@
 void scatter(
     oc::Channel& prevChl,
     oc::Channel& nextChl,
+    int pIdx,
     int role,
     const std::vector<aby3::u64>& srcTag, 
     const std::vector<aby3::u64>& dstTag, 
@@ -17,6 +18,7 @@ void scatter(
 void gather(
     oc::Channel& prevChl,
     oc::Channel& nextChl,
+    int pIdx,
     int role,
     const std::vector<aby3::u64>& dstTag, 
     const std::vector<aby3::u64>& vertexTag,
