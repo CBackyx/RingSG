@@ -13,6 +13,7 @@
 #include <atomic>
 #include <string>
 #include <thread>
+#include <iostream>
 
 #include "aby3-Graph/OGA.h"
 #include "aby3-Graph/cc.h"
@@ -304,7 +305,7 @@ void Sh3_Graph_OGA_test()
 
 void Sh3_Graph_CC_test()
 {
-    u64 numP = 4;
+    u64 numP = 5;
     std::vector<u64> pIndices(5, 0);
     for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
 
@@ -367,9 +368,9 @@ void Sh3_Graph_CC_test()
     // Initialize graph data
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
-    u64 numVertexPerP = (1 << 2);
-    u64 numIntraEdgePerP = (1 << 2);
-    u64 numInterEdgePerPair = (1 << 2);
+    u64 numVertexPerP = (1 << 20);
+    u64 numIntraEdgePerP = (1 << 20);
+    u64 numInterEdgePerPair = (1 << 20);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
@@ -393,74 +394,6 @@ void Sh3_Graph_CC_test()
             }
         }
     }    
-    
-
-    // Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
-    // Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
-    // Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
-    // Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
-    // Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
-    // Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
-
-
-    // CommPkg comms[3], debugComm[3];
-    // comms[0] = { chl02, chl01 };
-    // comms[1] = { chl10, chl12 };
-    // comms[2] = { chl21, chl20 };
-
-    // u64 wordSize = 1;
-    // u64 bitSize = wordSize << 6;
-
-    // u64 width = 1 << 20;
-    // std::atomic<bool> failed(false);
-    // //bool manual = false;
-
-    // std::array < std::vector<oc::Matrix<i64>>, 3> CC;
-    // std::array < std::vector<oc::Matrix<i64>>, 3> CC2;
-    // Sh3BinaryEvaluator evals[3];
-
-    // i64Matrix value(width, wordSize);
-
-    // std::vector<u64> group(width, 0);
-    // PRNG prng(ZeroBlock);
-    // prng.get(value.data(), value.size());
-    // // for (u64 i = 0; i < width; ++i) {
-    // //     for (u64 j = 0; j < wordSize; ++j) value(i, j) = i;
-    // // }
-    // u64 curGroupSize = (1 << 10);
-    // u64 curGroupId = 1;
-    // u64 groupMember = curGroupSize;
-    // for (u64 i = 0; i < width; ++i) {
-    //     group[i] = curGroupId;
-    //     groupMember -= 1;
-    //     if (groupMember == 0) {
-    //         // curGroupSize += 1;
-    //         curGroupId += 1;
-    //         curGroupSize >>= 1;
-    //         if (curGroupSize == 0) curGroupSize = 1;
-    //         groupMember = curGroupSize;
-    //     }
-    // }
-    // // for (u64 i = 0; i < width; ++i) printf("%lu ", group[i]);
-    // // printf("\n");
-    // std::vector<u64> aggSlots;
-    // i64Matrix gtAgg(width, wordSize);
-    // u64 curGroup = group[width - 1];
-    // for (u64 j = 0; j < wordSize; ++j) gtAgg(width - 1, j) = value(width - 1, j);
-    // for (i64 i = width - 2; i >= 0; --i) {
-    //     if (curGroup == group[i]) {
-    //         for (u64 j = 0; j < wordSize; ++j) gtAgg(i, j) = value(i, j) | gtAgg(i + 1, j);
-    //     } else {
-    //         for (u64 j = 0; j < wordSize; ++j) gtAgg(i, j) = value(i, j);
-    //         aggSlots.push_back(i + 1);
-    //     }
-    //     curGroup = group[i];
-    // }
-    // aggSlots.push_back(0);
-
-    // BetaLibrary lib;
-    // auto andCir = lib.int_int_bitwiseOr(bitSize, bitSize, bitSize);
-    // andCir->levelByAndDepth();
 
     BetaLibrary lib;
     auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
@@ -672,37 +605,28 @@ void Sh3_Graph_CC_test()
         serverVertexData.setZero();
         computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
         for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
-        // i64Matrix agged(width, wordSize);
-        // // oc::lout << "here " << pIdx << " H1" <<  std::endl;
-        // i64Matrix curValue(width, wordSize);
-        // if (pIdx == 0) curValue = value;
-        // else curValue.setZero();
 
-        // run_OGA(
-        //     comms[pIdx].mPrev,
-        //     comms[pIdx].mNext,
-        //     pIdx,
-        //     group,
-        //     curValue,
-        //     agged,
-        //     andCir
-        // );
-        // // oc::lout << "here " << pIdx << " H2" <<  std::endl;
-        
-        // for (auto slot : aggSlots)
-        // {
-        //     for (u64 j = 0; j < wordSize; ++j) {
-        //         if (gtAgg(slot, j) != agged(slot, j)) {
-        //             if (pIdx == 0) oc::lout << Color::Red << "pidx: " << pIdx << " failed at " << slot << " " << j << " "
-        //                 << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;
-        //             failed = true;
-        //         } else {
-        //             // if (pIdx == 0) oc::lout << Color::Green << "pidx: " << pIdx << " succeeded at " << slot << " " << j << " "
-        //             //     << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;                    
-        //         }
-        //     }
-        // }
+        u64 sent = 0, recv = 0;
+        for (u64 i = 0; i < 3; ++i) {
+            sent += computeComms[i].mPrev.getTotalDataSent();
+            recv += computeComms[i].mPrev.getTotalDataRecv();
+            sent += computeComms[i].mNext.getTotalDataSent();
+            recv += computeComms[i].mNext.getTotalDataRecv();
+        }
+        for (u64 i = 0; i < delClientChls.size(); ++i) {
+            if (i != pIdx) {
+                sent += delClientChls[i].getTotalDataSent();
+                recv += delClientChls[i].getTotalDataRecv();
+                sent += delServerChls[i].getTotalDataSent();
+                recv += delServerChls[i].getTotalDataRecv();
+            }
+        }
 
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << pIdx << " " << std::endl;
+        std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+            << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+        std::cout << IoStream::unlock;
     };
 
     std::vector<std::thread> thrds;
