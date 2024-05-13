@@ -3,10 +3,27 @@
 #include <cryptoTools/Common/Timer.h>
 #include <cryptoTools/Common/TestCollection.h>
 #include <cstdio>
+
+#include "aby3/sh3/Sh3Encryptor.h"
+#include "aby3/sh3/Sh3BinaryEvaluator.h"
+#include "aby3/Circuit/CircuitLibrary.h"
+#include "cryptoTools/Network/IOService.h"
+#include "cryptoTools/Common/Log.h"
+#include <random>
+#include "cryptoTools/Crypto/PRNG.h"
+
+#include <cryptoTools/Circuit/BetaLibrary.h>
+#include <iomanip>
+#include <atomic>
+#include <vector>
+#include <string>
+
+
 //////////////////
 //     MAIN     //
 //////////////////
 using namespace oc;
+using namespace aby3;
 
 template<typename T>
 struct vectorPrint
@@ -381,4 +398,153 @@ void lowMC_BinFileCircuit_test() {
             throw UnitTestSkipped("Known issue, need to investigate. " LOCATION);
         }
     }
+}
+
+std::vector<u64> serializeStringToU64(const std::string& str) {
+    std::vector<u64> vec;
+    u64 buffer = 0;
+    int bufferIndex = 0;
+
+    for (char c : str) {
+        buffer |= static_cast<u64>(c) << (8 * bufferIndex++);
+        if (bufferIndex == 8) {
+            vec.push_back(buffer);
+            buffer = 0;
+            bufferIndex = 0;
+        }
+    }
+
+    // Handle any remaining characters in the buffer
+    if (bufferIndex > 0) {
+        vec.push_back(buffer);
+    }
+
+    return vec;
+}
+
+std::string deserializeU64ToString(const std::vector<u64>& vec, int n) {
+    std::string result;
+    result.reserve(n); // Reserve space for n characters
+
+    for (u64 num : vec) {
+        for (int i = 0; i < 8 && n > 0; ++i, --n) {
+            char c = static_cast<char>((num >> (8 * i)) & 0xFF);
+            result.push_back(c);
+        }
+    }
+
+    return result;
+}
+
+void lowMC_CircuitEval_test() {
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    BetaCircuit lowMCCir;
+
+    std::string id = "kk";
+    std::string value = "hello-world";
+    std::string filename = "./lowMCCircuit_ " + id + ".bin";
+
+    // std::ifstream in;
+    // in.open(filename, std::ios::in | std::ios::binary);
+    LowMC2<> cipher1(false, 1);
+    cipher1.to_enc_circuit(lowMCCir);
+
+    // if (in.is_open() == false) {
+    //     LowMC2<> cipher1(false, 1);
+    //     cipher1.to_enc_circuit(lowMCCir);
+
+    //     std::ofstream out;
+    //     out.open(filename, std::ios::trunc | std::ios::out | std::ios::binary);
+    //     lowMCCir.levelByAndDepth();
+
+    //     lowMCCir.writeBin(out);
+    //     out.close();
+    // } else {
+    //     lowMCCir.readBin(in);
+    // }
+    u64 rounds = lowMCCir.mInputs.size() - 1;
+    u64 blockSize = 256;
+    u64 wordSize = blockSize / 64;
+
+    std::vector<u64> serialized = serializeStringToU64(id + "::" + value);
+    u64 width = serialized.size() / wordSize;
+    if (serialized.size() % wordSize != 0) width += 1;
+
+    auto routine = [&](int pIdx) {
+        i64Matrix kv(width, wordSize);
+        i64Matrix enckv(width, wordSize);
+        PRNG prng(toBlock(0, pIdx));
+        std::vector<i64Matrix> keys(rounds);
+        for (u64 i = 0; i < rounds; ++i) {
+            keys[i].resize(1, wordSize);
+            prng.get(keys[i].data(), keys[i].size());
+        }
+        for (u64 i = 0; i < serialized.size(); ++i) {
+            kv(i / wordSize, i % wordSize) = serialized[i];
+        }
+
+        Sh3Runtime rt(pIdx, comms[pIdx]);
+
+        sbMatrix KV(width, blockSize);
+        sbMatrix encKV(width, blockSize);
+        std::vector<sbMatrix> Keys(rounds);
+        for (u64 i = 0; i < rounds; ++i) {
+            Keys[i].resize(1, blockSize);
+        }
+
+        Sh3Encryptor enc;
+        enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+        Sh3BinaryEvaluator eval;
+        eval.mPrng.SetSeed(toBlock(pIdx));
+        Sh3ShareGen gen;
+        gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        auto task = rt.noDependencies();
+
+        if (pIdx == 0) {
+            task = enc.localBinMatrix(task, kv, KV);
+        } else {
+            task = enc.remoteBinMatrix(task, KV);
+        }
+        for (u64 i = 0; i < rounds; ++i) {
+            task = enc.localBinMatrix(task, keys[i], Keys[i]);
+        }
+        task.get();
+
+
+        eval.setCir(&lowMCCir, width, gen);
+        eval.setInput(0, KV);
+        for (u64 i = 0; i < rounds; ++i) {
+            eval.setReplicatedInput(i + 1, Keys[i]);
+        }
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, encKV);
+
+        enc.revealAll(rt.noDependencies(), encKV, enckv);
+
+        u64 digest = 0;
+        for (u64 i = 0; i < width; ++i) {
+            for (u64 j = 0; j < wordSize; ++j) digest ^= enckv(i, j);
+        }
+    };
 }

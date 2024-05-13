@@ -583,7 +583,7 @@ void Sh3_Graph_CC_test()
             vertexDataShare = updatedVertexDataShare;
         };
 
-        u64 numIters = 1;
+        u64 numIters = 5;
         for (u64 iter = 0; iter < numIters; ++iter) {
             std::vector<std::thread> scatterThrds; 
             for (u64 role = 0; role < 3; ++role) {
