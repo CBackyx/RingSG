@@ -495,8 +495,10 @@ void lowMC_CircuitEval_test() {
         i64Matrix enckv(width, wordSize);
         PRNG prng(toBlock(0, pIdx));
         std::vector<i64Matrix> keys(rounds);
+        std::vector<i64Matrix> mergedKeys(rounds);
         for (u64 i = 0; i < rounds; ++i) {
             keys[i].resize(1, wordSize);
+            mergedKeys[i].resize(1, wordSize);
             prng.get(keys[i].data(), keys[i].size());
         }
         for (u64 i = 0; i < serialized.size(); ++i) {
@@ -540,11 +542,23 @@ void lowMC_CircuitEval_test() {
         eval.asyncEvaluate(rt.noDependencies()).get();
         eval.getOutput(0, encKV);
 
-        enc.revealAll(rt.noDependencies(), encKV, enckv);
+        task = enc.revealAll(rt.noDependencies(), encKV, enckv);
+        for (u64 i = 0; i < rounds; ++i) {
+            task = enc.revealAll(task, Keys[i], mergedKeys[i]);
+        }
+        task.get();
 
         u64 digest = 0;
         for (u64 i = 0; i < width; ++i) {
             for (u64 j = 0; j < wordSize; ++j) digest ^= enckv(i, j);
         }
     };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
 }
