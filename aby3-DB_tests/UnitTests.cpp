@@ -7,6 +7,7 @@ oc::TestCollection DB_tests([](oc::TestCollection& tc) {
     tc.add("lowMC_FileCircuit_test       ", lowMC_FileCircuit_test);
     tc.add("lowMC_BinFileCircuit_test    ", lowMC_BinFileCircuit_test);
     tc.add("lowMC_CircuitEval_test       ", lowMC_CircuitEval_test);
+    tc.add("lowMC_CircuitEval_Simplest_test       ", lowMC_CircuitEval_Simplest_test);
 
     tc.add("DB_computeKeys_test          ", DB_computeKeys_test);
 
