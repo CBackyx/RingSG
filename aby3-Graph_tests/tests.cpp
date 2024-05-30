@@ -17,9 +17,171 @@
 
 #include "aby3-Graph/OGA.h"
 #include "aby3-Graph/cc.h"
+#include "aby3-Graph/shuffle.h"
 
 using namespace oc;
 using namespace aby3;
+
+void Sh3_Graph_eq_test()
+{
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 byteSize = 32;
+    u64 bitSize = byteSize << 3;
+
+    u64 width = 1 << 20;
+    bool failed = false;
+    //bool manual = false;
+
+    Sh3BinaryEvaluator evals[3];
+
+    Matrix<u8> a(width, byteSize), b(width, byteSize);
+    PRNG prng(ZeroBlock);
+    prng.get(a.data(), a.size());
+    prng.get(b.data(), b.size());
+
+    // printf("H-1\n");
+
+    BetaLibrary lib;
+    BetaCircuit *cir =  lib.int_eq(bitSize);
+
+    // printf("H-2\n");
+
+    cir->levelByAndDepth();
+
+    // printf("H-3\n");
+
+    auto routine = [&](int pIdx) {
+
+        PackedBin c(width, 1);
+
+        Sh3Runtime rt(pIdx, comms[pIdx]);
+
+        sPackedBin A(width, bitSize), B(width, bitSize), C(width, 1);
+
+        Sh3Encryptor enc;
+        enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        // auto task = rt.noDependencies();
+
+        if (pIdx == 0) {
+            enc.localPackedBinary(rt.noDependencies(), a, A, true).get();
+        } else {
+            enc.remotePackedBinary(rt.noDependencies(), A).get();
+        }
+
+        if (pIdx == 1) {
+            enc.localPackedBinary(rt.noDependencies(), b, B, true).get();
+        } else {
+            enc.remotePackedBinary(rt.noDependencies(), B).get();
+        }
+
+        // printf("H1\n");
+
+        auto& eval = evals[pIdx];
+
+        eval.mPrng.SetSeed(toBlock(pIdx));
+
+        //eval.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+        //if (pIdx == 0)
+        //    oc::lout << "---------------------------------------" << std::endl;
+
+        Sh3ShareGen gen;
+        gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        // case Manual:
+        // task.get();
+        eval.setCir(cir, width, gen);
+        eval.setInput(0, A);
+        eval.setInput(1, B);
+
+        // printf("H2\n");
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, C);
+
+        // printf("H3\n");
+        
+        // task = eval.asyncEvaluate(task, cir, gen, { &A, &B, &C }, { &D });
+
+        // task.get();
+
+        // printf("++ %lu %lu\n", d.rows(), d.cols());
+        enc.revealAll(rt.noDependencies(), C, c).get();
+
+        // printf("H4\n");
+
+        // for (u64 i = 0; i < width; ++i)
+        // {
+        //     if (c(i, 0) == 1) {
+        //         for (u64 j = 0; j < byteSize; ++j) {
+        //             if (d(i, j) != a(i, j)) {
+        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //                 failed = true;
+        //             } else {
+        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //             }
+        //         }
+        //     } else {
+        //         for (u64 j = 0; j < byteSize; ++j) {
+        //             if (d(i, j) != b(i, j)) {
+        //                 oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " << j << " " 
+        //                     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //                 failed = true;
+        //             } else {
+        //                 // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+        //                 //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+        //             }
+        //         }
+        //     }
+            
+        // }
+
+        u64 sent = 0, recv = 0;
+        sent += comms[pIdx].mPrev.getTotalDataSent();
+        sent += comms[pIdx].mNext.getTotalDataSent();
+        recv += comms[pIdx].mPrev.getTotalDataRecv();
+        recv += comms[pIdx].mNext.getTotalDataRecv();
+
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << pIdx << " " << std::endl;
+        std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+            << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+        std::cout << IoStream::unlock;
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
+}
 
 void Sh3_Graph_multiplex_test()
 {
@@ -638,4 +800,109 @@ void Sh3_Graph_CC_test()
 
     // if (failed)
     //     throw std::runtime_error(LOCATION);
+}
+
+void Sh3_Graph_shuffle_test() {
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 wordSize = 1;
+    u64 bitSize = wordSize << 6;
+
+    u64 width = 1 << 3;
+    std::atomic<bool> failed(false);
+    //bool manual = false;
+
+    Sh3BinaryEvaluator evals[3];
+
+    i64Matrix value(width, wordSize);
+
+    PRNG prng(ZeroBlock);
+    prng.get(value.data(), value.size());
+    for (u64 i = 0; i < width; ++i) {
+        for (u64 j = 0; j < wordSize; ++j) value(i, j) = i;
+    }
+
+    auto routine = [&](int pIdx) {
+        CommPkg& comm = comms[pIdx];
+        int role = pIdx;
+        Sh3Runtime rt(role, comm);
+        Sh3Encryptor enc;
+        enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+        Sh3BinaryEvaluator eval;    
+        eval.mPrng.SetSeed(toBlock(role));
+        Sh3ShareGen gen;
+        gen.init(toBlock(role), toBlock((role + 1) % 3));
+        
+        sbMatrix input(width, bitSize), output(width, bitSize);
+        i64Matrix plainOutput(width, wordSize);
+
+        if (pIdx == 0) enc.localBinMatrix(rt.noDependencies(), value, input).get();
+        else enc.remoteBinMatrix(rt.noDependencies(), input).get();
+
+        std::vector<u64> prevPerm, nextPerm;
+        shuffle(
+            comm.mPrev,
+            comm.mNext,
+            role,
+            toBlock(pIdx),
+            input,
+            output,
+            prevPerm,
+            nextPerm,
+            enc
+        );
+
+        // output = input;
+
+        enc.revealAll(rt.noDependencies(), output, plainOutput).get();
+        
+        if (pIdx == 0) {
+            for (u64 i = 0; i < width; ++i) {
+                for (u64 j = 0; j < wordSize; ++j) {
+                    oc::lout << u64(plainOutput(i, j)) << " ";
+                    // if (gtAgg(slot, j) != agged(slot, j)) {
+                    //     if (pIdx == 0) oc::lout << Color::Red << "pidx: " << pIdx << " failed at " << slot << " " << j << " "
+                    //         << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;
+                    //     failed = true;
+                    // } else {
+                    //     // if (pIdx == 0) oc::lout << Color::Green << "pidx: " << pIdx << " succeeded at " << slot << " " << j << " "
+                    //     //     << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;                    
+                    // }
+                }
+                oc::lout << std::endl;
+            }
+        }
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
 }
