@@ -833,11 +833,11 @@ void full_OEP_test()
     // u64 srcSize = 50;
     // u64 destSize = srcSize / 2;
     u64 trials = 1;
-    u64 srcSize = (1 << 10);
-    u64 destSize = (1 << 22);
+    u64 srcSize = (1 << 20);
+    u64 destSize = (1 << 20);
     // printf("srcSize = %lu\n", srcSize);
     // printf("destSize = %lu\n", destSize);
-    u64 bytes = 1;
+    u64 bytes = 8;
 
     Matrix<u8> src0(srcSize, bytes), src1(srcSize, bytes);
     Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
@@ -868,12 +868,36 @@ void full_OEP_test()
             setThreadName("t0");
             OblvSwitchNet snet("test");
             snet.OEPClient(chl02, chl01, srcTag, destTag, prng, src0, dest0);
+
+            u64 sent = 0, recv = 0;
+            sent += chl02.getTotalDataSent();
+            sent += chl01.getTotalDataSent();
+            recv += chl02.getTotalDataRecv();
+            recv += chl01.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 0 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
         });
 
         auto t1 = std::thread([&]() {
             setThreadName("t1");
             OblvSwitchNet snet("test");
             snet.OEPServer(chl10, chl12, src1, dest1);
+
+            u64 sent = 0, recv = 0;
+            sent += chl10.getTotalDataSent();
+            sent += chl12.getTotalDataSent();
+            recv += chl10.getTotalDataRecv();
+            recv += chl12.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 1 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
         });
 
         auto t2 = std::thread([&]() {
@@ -881,6 +905,18 @@ void full_OEP_test()
             OblvSwitchNet snet("test");
             PRNG prng2(toBlock(44444));
             snet.OEPHelper(chl20, chl21, prng2, destSize, srcSize, bytes);
+
+            u64 sent = 0, recv = 0;
+            sent += chl20.getTotalDataSent();
+            sent += chl21.getTotalDataSent();
+            recv += chl20.getTotalDataRecv();
+            recv += chl21.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 2 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
         });
 
         t0.join();
