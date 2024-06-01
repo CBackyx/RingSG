@@ -307,6 +307,21 @@ void sbMatrixExtractFill(
     }
 }
 
+void vecExtractFill(
+    const std::vector<u64>& srcIdx,
+    const std::vector<u64>& dstIdx,
+    const std::vector<u64>& src,
+    std::vector<u64>& dst
+) {
+    if (srcIdx.size() != dstIdx.size()) {
+        printf("Unequal sizes of srcIdx and dstIdx during sbMatrixExtractFill!\n");
+        exit(-1);        
+    }
+    for (u64 i = 0; i < dstIdx.size(); ++i) {
+        dst[dstIdx[i]] = src[srcIdx[i]];
+    }
+}
+
 void run_OGA(
     Channel& prevChl,
     Channel& nextChl,
@@ -685,6 +700,31 @@ sPackedBin get_pair_indicator(
     return eq_result;
 }
 
+sPackedBin get_pair_indicator(
+    const std::vector<u64>& group_id_lhs,
+    const std::vector<u64>& group_id_rhs,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id_lhs.size();
+    assert(length > 0);
+    assert(group_id_rhs.size() == length);
+
+    Matrix<u8> plainEq(length, 1);
+    for (u64 i = 0; i < length; ++i) plainEq(i, 0) = group_id_lhs[i] == group_id_rhs[i]? 1 : 0;
+
+    sPackedBin eq_result(length, 1);
+    if (rt.mPartyIdx == 0) {
+        enc.localPackedBinary(rt.noDependencies(), plainEq, 1, eq_result).get();
+    } else {
+        enc.remotePackedBinary(rt.noDependencies(), eq_result).get();
+    }
+
+    return eq_result;
+}
+
 sbMatrix conditional_merge(
     const sPackedBin& indicator,
     const sbMatrix& lhs,
@@ -825,6 +865,69 @@ sbMatrix prefix_network_aggregate(
     return ret_value;    
 }
 
+
+sbMatrix prefix_network_aggregate(
+    const std::vector<u64>& group_id,
+    const sbMatrix& value,
+    AggregationOp agg_op,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id.size();
+    assert(length == value.rows());
+    assert(length > 0);
+    u64 group_id_bitSize = 64;
+    u64 value_bitSize = value.bitCount();
+
+    sbMatrix ret_value = value;
+
+    if (length == 1) {
+        return ret_value;
+    }
+
+    std::vector<u64> index_vec(length);
+    std::iota(index_vec.begin(), index_vec.end(), 0); // fill with 0, 1, ..., length - 1
+    std::vector<std::vector<u64>> sequence;
+    get_merge_sequence(index_vec, sequence);
+    
+    sPackedBin indicator(length, 1);
+
+    u64 layer_num = sequence.size();
+
+    for (u64 i = 0; i < layer_num; i++) {
+        const std::vector<u64>& cur_sequence = sequence[i];
+        u64 cur_length = cur_sequence.size();
+        u64 pair_num = cur_length / 2;
+        std::vector<u64> group_id_lhs(pair_num, 0);
+        std::vector<u64> group_id_rhs(pair_num, 0);
+        sbMatrix lhs(pair_num, value_bitSize);
+        sbMatrix rhs(pair_num, value_bitSize);
+
+        std::vector<u64> lhs_src;
+        std::vector<u64> rhs_src;
+        std::vector<u64> dst;
+        for (u64 j = 0; j < pair_num; j++) {
+            dst.push_back(j);
+            lhs_src.push_back(cur_sequence[j * 2]);
+            rhs_src.push_back(cur_sequence[j * 2 + 1]);           
+        }
+        vecExtractFill(lhs_src, dst, group_id, group_id_lhs);
+        sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
+        vecExtractFill(rhs_src, dst, group_id, group_id_rhs);
+        sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
+
+        sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);
+
+        sbMatrix cur_merge_result = conditional_merge(cur_indicator, lhs, rhs, agg_op, eval, gen, rt, enc);
+
+        sbMatrixExtractFill(dst, lhs_src, cur_merge_result, ret_value);
+    }
+
+    return ret_value;    
+}
+
 sbMatrix prefix_network_propagate(
     const sbMatrix& group_id,
     const sbMatrix& value,
@@ -881,6 +984,81 @@ sbMatrix prefix_network_propagate(
         sbMatrixExtractFill(lhs_src, dst, group_id, group_id_lhs);
         sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
         sbMatrixExtractFill(rhs_src, dst, group_id, group_id_rhs);
+        sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
+
+        sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);
+
+        eval.setCir(multiplexCir, pair_num, gen);
+        eval.setInput(0, lhs);
+        eval.setInput(1, rhs);
+        eval.setInput(2, cur_indicator);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, rhs);
+
+        sbMatrixExtractFill(dst, rhs_src, rhs, ret_value);
+    }
+
+    // print_decoded_vector(ret_value, 10);
+
+    return ret_value;
+}
+
+sbMatrix prefix_network_propagate(
+    const std::vector<u64>& group_id,
+    const sbMatrix& value,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id.size();
+    assert(length == value.rows());
+    assert(length > 0);
+    u64 group_id_bitSize = 64;
+    u64 value_bitSize = value.bitCount();
+
+    sbMatrix ret_value = value;
+
+    if (length == 1) {
+        return ret_value;
+    }
+
+    // print_decoded_vector(group_id, 10);
+    // print_decoded_vector(value, 10);
+
+    std::vector<u64> index_vec(length);
+    std::iota(index_vec.begin(), index_vec.end(), 0); // fill with 0, 1, ..., length - 1
+    // print_vector(index_vec, 10);
+    std::vector<std::vector<u64>> sequence;
+    get_merge_sequence(index_vec, sequence);
+
+    u64 layer_num = sequence.size();
+
+    BetaLibrary lib;
+    BetaCircuit *multiplexCir =  lib.int_int_multiplex(value_bitSize);
+
+    for (int i = layer_num - 1; i >= 0; i--) {
+        const std::vector<u64>& cur_sequence = sequence[i];
+        // printf("%ld\n", i);
+        // print_vector(cur_sequence, cur_sequence.size());
+        u64 cur_length = cur_sequence.size();
+        u64 pair_num = cur_length / 2;
+        std::vector<u64> group_id_lhs(pair_num, 0);
+        std::vector<u64> group_id_rhs(pair_num, 0);
+        sbMatrix lhs(pair_num, value_bitSize);
+        sbMatrix rhs(pair_num, value_bitSize);
+
+        std::vector<u64> lhs_src;
+        std::vector<u64> rhs_src;
+        std::vector<u64> dst;
+        for (u64 j = 0; j < pair_num; j++) {
+            dst.push_back(j);
+            lhs_src.push_back(cur_sequence[j * 2]);
+            rhs_src.push_back(cur_sequence[j * 2 + 1]);           
+        }
+        vecExtractFill(lhs_src, dst, group_id, group_id_lhs);
+        sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
+        vecExtractFill(rhs_src, dst, group_id, group_id_rhs);
         sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
 
         sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);

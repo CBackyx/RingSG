@@ -1090,12 +1090,14 @@ void Sh3_Graph_PrefixAgg_test() {
 
     i64Matrix value(width, wordSize);
     i64Matrix group_id(width, 1);
+    std::vector<u64> group_id_vec(width, 0);
 
     PRNG prng(ZeroBlock);
     prng.get(value.data(), value.size());
     for (u64 i = 0; i < width; ++i) {
         for (u64 j = 0; j < wordSize; ++j) value(i, j) = prng.get<u64>() % (width * 2);
         group_id(i, 0) = i / 4;
+        group_id_vec[i] = i / 4;
     }
 
     BetaLibrary lib;
@@ -1127,15 +1129,25 @@ void Sh3_Graph_PrefixAgg_test() {
         if (pIdx == 0) enc.localBinMatrix(rt.noDependencies(), group_id, G).get();
         else enc.remoteBinMatrix(rt.noDependencies(), G).get();
         
+        // output = prefix_network_aggregate(
+        //     G,
+        //     input,
+        //     AggregationOp::MIN_AGG,
+        //     eval,
+        //     gen,
+        //     rt,
+        //     enc
+        // );      
+
         output = prefix_network_aggregate(
-            G,
+            group_id_vec,
             input,
             AggregationOp::MIN_AGG,
             eval,
             gen,
             rt,
             enc
-        );      
+        );    
 
         // output = prefix_network_propagate(
         //     G,
