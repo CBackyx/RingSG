@@ -1,5 +1,7 @@
 #include "OGA.h"
 
+#include <cassert>
+
 using namespace oc;
 using namespace aby3;
 
@@ -614,5 +616,287 @@ void run_ConditionalMerge(
     task.get();
 
     intMat2ByteMat(dd, d, 1);
+}
+
+void get_merge_sequence(
+    const std::vector<u64>& index_vec, 
+    std::vector<std::vector<u64>>& sequence
+) {
+    u64 length = index_vec.size();
+    assert(length > 0);
+
+    if (length == 1) {
+        return;
+    }
+
+    if (length % 2 == 0) {
+        sequence.push_back(index_vec);
+    } else {
+        sequence.push_back(std::vector<u64>(index_vec.begin(), index_vec.end() - 1));
+    }
+
+    u64 cur_length = (length + 1) / 2;
+    std::vector<u64> cur_index_vec(cur_length);
+    for (u64 i = 0; i < cur_length; i++) {
+        cur_index_vec[i] = index_vec[i * 2];
+    }
+
+    get_merge_sequence(cur_index_vec, sequence);
+
+    if (length <= 2) {
+        return;
+    }
+
+    if (length % 2 == 0) {
+        sequence.push_back(std::vector<u64>(index_vec.begin() + 1, index_vec.end() - 1));
+    } else {
+        sequence.push_back(std::vector<u64>(index_vec.begin() + 1, index_vec.end()));
+    }
+}
+
+sPackedBin get_pair_indicator(
+    const sbMatrix& group_id_lhs,
+    const sbMatrix& group_id_rhs,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id_lhs.rows();
+    assert(length > 0);
+    assert(group_id_rhs.rows() == length);
+    u64 bitSize = group_id_lhs.bitCount();
+    if (bitSize != 64) {
+        printf("Unexpected bitSize during get_pair_indicator!\n");
+        exit(-1);
+    }
+
+    sPackedBin eq_result(length, 1);
+
+    BetaLibrary lib;
+    BetaCircuit *eqCir =  lib.int_eq(bitSize);
+
+    eval.setCir(eqCir, length, gen);
+    eval.setInput(0, group_id_lhs);
+    eval.setInput(1, group_id_rhs);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, eq_result);
+
+    return eq_result;
+}
+
+sbMatrix conditional_merge(
+    const sPackedBin& indicator,
+    const sbMatrix& lhs,
+    const sbMatrix& rhs,
+    AggregationOp agg_op,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = indicator.shareCount();
+    assert(length > 0);
+    assert(length == lhs.rows() && length == rhs.rows());
+    u64 bitSize = lhs.bitCount();
+
+    BetaLibrary lib;
+    BetaCircuit *ltCir =  lib.int_int_lt(64, 64);
+    BetaCircuit *multiplexCir =  lib.int_int_multiplex(bitSize);
+
+    sbMatrix agg_result(length, bitSize);
+    switch (agg_op) {
+        case AggregationOp::NONE_AGG:
+            throw std::runtime_error("Unsupported Aggregation Op");
+        case AggregationOp::MIN_AGG: {
+                sPackedBin C(length, 1);
+                eval.setCir(ltCir, length, gen);
+                eval.setInput(0, lhs);
+                eval.setInput(1, rhs);
+                eval.asyncEvaluate(rt.noDependencies()).get();
+                eval.getOutput(0, C);
+
+                // Multiplex
+                eval.setCir(multiplexCir, length, gen);
+                eval.setInput(0, lhs);
+                eval.setInput(1, rhs);
+                eval.setInput(2, C);
+                eval.asyncEvaluate(rt.noDependencies()).get();
+                eval.getOutput(0, agg_result);
+                break;
+            }
+        default:
+            throw std::runtime_error("Unsupported Aggregation Op");
+            break;
+    }
+
+    sbMatrix cond_result(length, bitSize);
+    eval.setCir(multiplexCir, length, gen);
+    eval.setInput(0, agg_result);
+    eval.setInput(1, lhs);
+    eval.setInput(2, indicator);
+    eval.asyncEvaluate(rt.noDependencies()).get();
+    eval.getOutput(0, cond_result); 
+
+    return cond_result;
+}
+
+sbMatrix prefix_network_aggregate(
+    const sbMatrix& group_id,
+    const sbMatrix& value,
+    AggregationOp agg_op,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id.rows();
+    assert(length == value.rows());
+    assert(length > 0);
+    u64 group_id_bitSize = 64;
+    u64 value_bitSize = value.bitCount();
+
+    sbMatrix ret_value = value;
+
+    if (length == 1) {
+        return ret_value;
+    }
+
+    std::vector<u64> index_vec(length);
+    std::iota(index_vec.begin(), index_vec.end(), 0); // fill with 0, 1, ..., length - 1
+    std::vector<std::vector<u64>> sequence;
+    get_merge_sequence(index_vec, sequence);
+    
+    sPackedBin indicator(length, 1);
+
+    u64 layer_num = sequence.size();
+
+    for (u64 i = 0; i < layer_num; i++) {
+        const std::vector<u64>& cur_sequence = sequence[i];
+        u64 cur_length = cur_sequence.size();
+        u64 pair_num = cur_length / 2;
+        sbMatrix group_id_lhs(pair_num, group_id_bitSize);
+        sbMatrix group_id_rhs(pair_num, group_id_bitSize);
+        sbMatrix lhs(pair_num, value_bitSize);
+        sbMatrix rhs(pair_num, value_bitSize);
+
+        std::vector<u64> lhs_src;
+        std::vector<u64> rhs_src;
+        std::vector<u64> dst;
+        for (u64 j = 0; j < pair_num; j++) {
+            dst.push_back(j);
+            lhs_src.push_back(cur_sequence[j * 2]);
+            rhs_src.push_back(cur_sequence[j * 2 + 1]);           
+        }
+        sbMatrixExtractFill(lhs_src, dst, group_id, group_id_lhs);
+        sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
+        sbMatrixExtractFill(rhs_src, dst, group_id, group_id_rhs);
+        sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
+
+        sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);
+
+        // if (i == 0) {
+        //     for (u64 j = 0; j < pair_num; j++) {
+        //         indicator[j * 2] = cur_indicator[j];
+        //     }
+        // } else if (i == layer_num - 1) {
+        //     for (u64 j = 0; j < pair_num; j++) {
+        //         indicator[j * 2 + 1] = cur_indicator[j];
+        //     }
+        // }
+
+        sbMatrix cur_merge_result = conditional_merge(cur_indicator, lhs, rhs, agg_op, eval, gen, rt, enc);
+
+        sbMatrixExtractFill(dst, lhs_src, cur_merge_result, ret_value);
+    }
+
+    // // Set non-start-of-group to zero
+    // std::vector<u8> filter_indicator = std::vector<u8>(indicator.begin(), indicator.end() - 1);
+    // std::vector<u8> zero_filter_indicator = std::vector<u8>(filter_indicator.size(), 0);
+    // std::vector<std::vector<u64>> ret_value_tail(ret_value.begin() + 1, ret_value.end());
+    // std::vector<std::vector<u64>> zero_vec(length - 1, std::vector<u64>(ret_value[0].size(), 0));
+    // std::vector<std::vector<u64>> filter_result;
+    // if (party == sci::ALICE) sci::twoPartyMux2(ret_value_tail, zero_vec, filter_indicator, filter_result, coTid, party, is_group_id_one_side);
+    // else sci::twoPartyMux2(ret_value_tail, zero_vec, zero_filter_indicator, filter_result, coTid, party, is_group_id_one_side);
+    // for (u64 i = 0; i < length - 1; i++) {
+    //     ret_value[i + 1] = filter_result[i];
+    // }
+
+    return ret_value;    
+}
+
+sbMatrix prefix_network_propagate(
+    const sbMatrix& group_id,
+    const sbMatrix& value,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id.rows();
+    assert(length == value.rows());
+    assert(length > 0);
+    u64 group_id_bitSize = 64;
+    u64 value_bitSize = value.bitCount();
+
+    sbMatrix ret_value = value;
+
+    if (length == 1) {
+        return ret_value;
+    }
+
+    // print_decoded_vector(group_id, 10);
+    // print_decoded_vector(value, 10);
+
+    std::vector<u64> index_vec(length);
+    std::iota(index_vec.begin(), index_vec.end(), 0); // fill with 0, 1, ..., length - 1
+    // print_vector(index_vec, 10);
+    std::vector<std::vector<u64>> sequence;
+    get_merge_sequence(index_vec, sequence);
+
+    u64 layer_num = sequence.size();
+
+    BetaLibrary lib;
+    BetaCircuit *multiplexCir =  lib.int_int_multiplex(value_bitSize);
+
+    for (int i = layer_num - 1; i >= 0; i--) {
+        const std::vector<u64>& cur_sequence = sequence[i];
+        // printf("%ld\n", i);
+        // print_vector(cur_sequence, cur_sequence.size());
+        u64 cur_length = cur_sequence.size();
+        u64 pair_num = cur_length / 2;
+        sbMatrix group_id_lhs(pair_num, group_id_bitSize);
+        sbMatrix group_id_rhs(pair_num, group_id_bitSize);
+        sbMatrix lhs(pair_num, value_bitSize);
+        sbMatrix rhs(pair_num, value_bitSize);
+
+        std::vector<u64> lhs_src;
+        std::vector<u64> rhs_src;
+        std::vector<u64> dst;
+        for (u64 j = 0; j < pair_num; j++) {
+            dst.push_back(j);
+            lhs_src.push_back(cur_sequence[j * 2]);
+            rhs_src.push_back(cur_sequence[j * 2 + 1]);           
+        }
+        sbMatrixExtractFill(lhs_src, dst, group_id, group_id_lhs);
+        sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
+        sbMatrixExtractFill(rhs_src, dst, group_id, group_id_rhs);
+        sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
+
+        sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);
+
+        eval.setCir(multiplexCir, pair_num, gen);
+        eval.setInput(0, lhs);
+        eval.setInput(1, rhs);
+        eval.setInput(2, cur_indicator);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, rhs);
+
+        sbMatrixExtractFill(dst, rhs_src, rhs, ret_value);
+    }
+
+    // print_decoded_vector(ret_value, 10);
+
+    return ret_value;
 }
 

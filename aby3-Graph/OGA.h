@@ -14,6 +14,13 @@
 #include <atomic>
 #include <random>
 
+enum AggregationOp {
+    NONE_AGG,
+    ADD_AGG,
+    MIN_AGG,
+    MAX_AGG
+};
+
 void byteMat2intMat(
     const oc::Matrix<aby3::u8>& input,
     aby3::i64Matrix& output
@@ -77,3 +84,21 @@ void run_ConditionalMerge(
     bool isRevealAll = true
 );
 
+aby3::sbMatrix prefix_network_aggregate(
+    const aby3::sbMatrix& group_id,
+    const aby3::sbMatrix& value,
+    AggregationOp agg_op,
+    aby3::Sh3BinaryEvaluator& eval,
+    aby3::Sh3ShareGen& gen,
+    aby3::Sh3Runtime& rt,
+    aby3::Sh3Encryptor& enc
+);
+
+aby3::sbMatrix prefix_network_propagate(
+    const aby3::sbMatrix& group_id,
+    const aby3::sbMatrix& value,
+    aby3::Sh3BinaryEvaluator& eval,
+    aby3::Sh3ShareGen& gen,
+    aby3::Sh3Runtime& rt,
+    aby3::Sh3Encryptor& enc
+);
