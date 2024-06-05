@@ -8,4 +8,5 @@ oc::TestCollection graph_tests([](oc::TestCollection& tc) {
     tc.add("Sh3_Graph_shuffle_test;          ", Sh3_Graph_shuffle_test);
     tc.add("Sh3_Graph_sort_test;             ", Sh3_Graph_sort_test);
     tc.add("Sh3_Graph_PrefixAgg_test;        ", Sh3_Graph_PrefixAgg_test);
+    tc.add("Sh3_Graph_GraphSC_test;          ", Sh3_Graph_GraphSC_test);
 });

@@ -38,3 +38,14 @@ void shuffle(
     aby3::sbMatrix& output,
     aby3::Sh3Encryptor& enc
 );
+
+void reverse_shuffle(
+    oc::Channel& prevChl,
+    oc::Channel& nextChl,
+    int role,
+    const std::vector<aby3::u64>& prevPerm,
+    const std::vector<aby3::u64>& nextPerm,
+    const aby3::sbMatrix& input,
+    aby3::sbMatrix& output,
+    aby3::Sh3Encryptor& enc    
+);

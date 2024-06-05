@@ -5,3 +5,4 @@ void Sh3_Graph_eq_test();
 void Sh3_Graph_shuffle_test();
 void Sh3_Graph_sort_test();
 void Sh3_Graph_PrefixAgg_test();
+void Sh3_Graph_GraphSC_test();

@@ -154,3 +154,74 @@ void shuffle(
         exit(-1);
     }
 }
+
+void reverse_shuffle(
+    Channel& prevChl,
+    Channel& nextChl,
+    int role,
+    const std::vector<u64>& prevPerm,
+    const std::vector<u64>& nextPerm,
+    const sbMatrix& input,
+    sbMatrix& output,
+    Sh3Encryptor& enc
+) {
+    sbMatrix randMat(input.rows(), input.mBitCount);
+    enc.rand(randMat);
+    // print_matrix(randMat.mShares[0], role);
+    // print_matrix(randMat.mShares[1], role);
+    sbMatrix randResult(input.rows(), input.mBitCount);
+    enc.rand(randResult);
+
+    if (role == 2) {
+        // Cal X1
+        Matrix<i64> X1 = xorMat(input.mShares[1], input.mShares[0]);
+        X1 = xorMat(X1, randMat.mShares[0]);
+        X1 = permMat(X1, nextPerm);
+        Matrix<i64> X2 = xorMat(X1, randMat.mShares[1]);
+        X2 = permMat(X2, prevPerm);
+        nextChl.asyncSendCopy(X2.data(), X2.size());
+        // Set result
+        output.resize(input.rows(), input.mBitCount);
+        output.mShares[1] = randResult.mShares[1];
+        output.mShares[0] = randResult.mShares[0];
+    } else if (role == 1) {
+        // Cal Y1 and send
+        Matrix<i64> Y1 = xorMat(input.mShares[0], randMat.mShares[1]);
+        Y1 = permMat(Y1, prevPerm);
+        nextChl.asyncSendCopy(Y1.data(), Y1.size());
+        // Recv X2
+        Matrix<i64> X2(Y1.rows(), Y1.cols());
+        prevChl.recv(X2.data(), X2.size());
+        // Cal X3
+        Matrix<i64> X3 = xorMat(X2, randMat.mShares[0]);
+        X3 = permMat(X3, nextPerm);
+        // Cal C1
+        Matrix<i64> C1 = xorMat(X3, randResult.mShares[1]);
+        Matrix<i64> C2(C1.rows(), C1.cols());
+        nextChl.asyncSendCopy(C1.data(), C1.size());
+        nextChl.recv(C2.data(), C2.size());
+        // Set result
+        output.resize(input.rows(), input.mBitCount);
+        output.mShares[1] = randResult.mShares[1];
+        output.mShares[0] = xorMat(C1, C2);     
+    } else if (role == 0) {
+        // Recv Y1
+        Matrix<i64> Y1(input.mShares[0].rows(), input.mShares[0].cols());
+        prevChl.recv(Y1.data(), Y1.size());
+        Matrix<i64> Y2 = xorMat(Y1, randMat.mShares[0]);
+        Y2 = permMat(Y2, nextPerm);
+        Matrix<i64> Y3 = xorMat(Y2, randMat.mShares[1]);
+        Y3 = permMat(Y3, prevPerm);
+        Matrix<i64> C2 = xorMat(Y3, randResult.mShares[0]);
+        Matrix<i64> C1(C2.rows(), C2.cols());
+        prevChl.asyncSendCopy(C2.data(), C2.size());
+        prevChl.recv(C1.data(), C1.size());
+        // Set result
+        output.resize(input.rows(), input.mBitCount);
+        output.mShares[1] = xorMat(C1, C2);
+        output.mShares[0] = randResult.mShares[0];
+    } else {
+        printf("Illegal role during shuffle!\n");
+        exit(-1);
+    }
+}

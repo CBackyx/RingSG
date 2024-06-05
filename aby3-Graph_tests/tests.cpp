@@ -19,6 +19,7 @@
 #include "aby3-Graph/cc.h"
 #include "aby3-Graph/shuffle.h"
 #include "aby3-Graph/sort.h"
+#include "aby3-Graph/graphsc.h"
 
 using namespace oc;
 using namespace aby3;
@@ -1181,6 +1182,87 @@ void Sh3_Graph_PrefixAgg_test() {
         //     printf("\n");
         // }
 
+        u64 sent = 0, recv = 0;
+        sent += comms[pIdx].mPrev.getTotalDataSent();
+        sent += comms[pIdx].mNext.getTotalDataSent();
+        recv += comms[pIdx].mPrev.getTotalDataRecv();
+        recv += comms[pIdx].mNext.getTotalDataRecv();
+
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << pIdx << " " << std::endl;
+        std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+            << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+        std::cout << IoStream::unlock;
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
+}
+
+void Sh3_Graph_GraphSC_test() {
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    std::atomic<bool> failed(false);
+    //bool manual = false;
+
+    GraphParam param = GraphParam {
+        num_iters: 5
+    };
+
+    std::string file_path = "./../test-data/small_graph.csv";
+    DataFrame df = load_dataframe_from_csv(file_path, false, false);
+    u64 bitSize = 64;
+
+    BetaLibrary lib;
+    BetaCircuit *ltCir =  lib.int_int_lt(bitSize, bitSize);
+    ltCir->levelByAndDepth();
+    BetaCircuit *orCir =  lib.int_int_bitwiseOr(bitSize, bitSize, bitSize);
+    orCir->levelByAndDepth();
+    BetaCircuit *multiplexCir =  lib.int_int_multiplex(bitSize);
+    multiplexCir->levelByAndDepth();
+    BetaCircuit *xorCir = lib.int_int_bitwiseXor(bitSize, bitSize, bitSize);
+    xorCir->levelByAndDepth();
+
+    auto routine = [&](int pIdx) {
+        GraphSC ana(
+            df,
+            param,
+            pIdx,
+            pIdx,
+            comms[pIdx].mPrev,
+            comms[pIdx].mNext
+        );
+
+        ana.run();
         u64 sent = 0, recv = 0;
         sent += comms[pIdx].mPrev.getTotalDataSent();
         sent += comms[pIdx].mNext.getTotalDataSent();
