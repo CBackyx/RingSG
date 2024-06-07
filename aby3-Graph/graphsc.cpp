@@ -89,6 +89,14 @@ sbMatrix extract_col(sbMatrix& v_share, size_t col_index) {
     return result;
 }
 
+void fill_col(sbMatrix& v_share, const sbMatrix& col, size_t col_index) {
+    size_t rows = v_share.rows();
+    for (u64 i = 0; i < rows; ++i) {
+        v_share.mShares[0](i, col_index) = col.mShares[0](i, 0);
+        v_share.mShares[1](i, col_index) = col.mShares[1](i, 0);
+    }
+}
+
 template <typename T>
 Matrix<T> open_permute(Matrix<T>& v_share, const std::vector<size_t>& perm) {
     assert(v_share.rows() == perm.size());
@@ -443,6 +451,7 @@ void GraphSC::run() {
         // print_duration(t_iter, "duration per GAS iter");
     }
     // table[3] = data_col;
+    fill_col(table, data_col, 3);
 
     // Inv Shuffle 1
     reverse_shuffle(

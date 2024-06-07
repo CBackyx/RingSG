@@ -928,6 +928,79 @@ sbMatrix prefix_network_aggregate(
     return ret_value;    
 }
 
+i64Matrix prefix_network_aggregate(
+    const std::vector<u64>& group_id,
+    const i64Matrix& value,
+    AggregationOp agg_op,
+    Sh3BinaryEvaluator& eval,
+    Sh3ShareGen& gen,
+    Sh3Runtime& rt,
+    Sh3Encryptor& enc
+) {
+    u64 length = group_id.size();
+    assert(length == value.rows());
+    assert(length > 0);
+    u64 group_id_bitSize = 64;
+    u64 value_bitSize = value.cols() * 64;
+
+    sbMatrix ret_value(length, value_bitSize);
+
+    auto task = rt.noDependencies();    
+    if (role == 0 || role == 1) {
+        task = enc.localBinMatrix(task, value, ret_value);
+    } else {
+        task = enc.remoteBinMatrix(task, ret_value);
+    }     
+    task.get();
+
+    if (length == 1) {
+        return ret_value;
+    }
+
+    std::vector<u64> index_vec(length);
+    std::iota(index_vec.begin(), index_vec.end(), 0); // fill with 0, 1, ..., length - 1
+    std::vector<std::vector<u64>> sequence;
+    get_merge_sequence(index_vec, sequence);
+    
+    sPackedBin indicator(length, 1);
+
+    u64 layer_num = sequence.size();
+
+    for (u64 i = 0; i < layer_num; i++) {
+        const std::vector<u64>& cur_sequence = sequence[i];
+        u64 cur_length = cur_sequence.size();
+        u64 pair_num = cur_length / 2;
+        std::vector<u64> group_id_lhs(pair_num, 0);
+        std::vector<u64> group_id_rhs(pair_num, 0);
+        sbMatrix lhs(pair_num, value_bitSize);
+        sbMatrix rhs(pair_num, value_bitSize);
+
+        std::vector<u64> lhs_src;
+        std::vector<u64> rhs_src;
+        std::vector<u64> dst;
+        for (u64 j = 0; j < pair_num; j++) {
+            dst.push_back(j);
+            lhs_src.push_back(cur_sequence[j * 2]);
+            rhs_src.push_back(cur_sequence[j * 2 + 1]);           
+        }
+        vecExtractFill(lhs_src, dst, group_id, group_id_lhs);
+        sbMatrixExtractFill(lhs_src, dst, ret_value, lhs);
+        vecExtractFill(rhs_src, dst, group_id, group_id_rhs);
+        sbMatrixExtractFill(rhs_src, dst, ret_value, rhs);
+
+        sPackedBin cur_indicator = get_pair_indicator(group_id_lhs, group_id_rhs, eval, gen, rt, enc);
+
+        sbMatrix cur_merge_result = conditional_merge(cur_indicator, lhs, rhs, agg_op, eval, gen, rt, enc);
+
+        sbMatrixExtractFill(dst, lhs_src, cur_merge_result, ret_value);
+    }
+
+    i64Matrix ret_plain_value(value.rows(), value.cols());
+    enc.revealToTwoParty(rt.noDependencies(), ret_value, ret_plain_value).get();
+
+    return ret_plain_value;    
+}
+
 sbMatrix prefix_network_propagate(
     const sbMatrix& group_id,
     const sbMatrix& value,
