@@ -46,7 +46,7 @@ void cognn_scatter(
     i64Matrix aggedSrcVertexShare_int = prefix_network_aggregate(
         edgeDstTag,
         srcVertexShare_int,
-        AggregationOp::MIN_AGG,
+        AggregationOp::OR_AGG,
         eval,
         gen,
         rt,

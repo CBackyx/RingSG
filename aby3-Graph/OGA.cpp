@@ -742,6 +742,7 @@ sbMatrix conditional_merge(
 
     BetaLibrary lib;
     BetaCircuit *ltCir =  lib.int_int_lt(64, 64);
+    BetaCircuit *orCir =  lib.int_int_bitwiseOr(64, 64, 64);
     BetaCircuit *multiplexCir =  lib.int_int_multiplex(bitSize);
 
     sbMatrix agg_result(length, bitSize);
@@ -761,6 +762,14 @@ sbMatrix conditional_merge(
                 eval.setInput(0, lhs);
                 eval.setInput(1, rhs);
                 eval.setInput(2, C);
+                eval.asyncEvaluate(rt.noDependencies()).get();
+                eval.getOutput(0, agg_result);
+                break;
+            }
+        case AggregationOp::OR_AGG: {
+                eval.setCir(orCir, length, gen);
+                eval.setInput(0, lhs);
+                eval.setInput(1, rhs);
                 eval.asyncEvaluate(rt.noDependencies()).get();
                 eval.getOutput(0, agg_result);
                 break;
@@ -946,6 +955,7 @@ i64Matrix prefix_network_aggregate(
     sbMatrix ret_value(length, value_bitSize);
 
     auto task = rt.noDependencies();    
+    int role = rt.mPartyIdx;
     if (role == 0 || role == 1) {
         task = enc.localBinMatrix(task, value, ret_value);
     } else {
@@ -954,7 +964,7 @@ i64Matrix prefix_network_aggregate(
     task.get();
 
     if (length == 1) {
-        return ret_value;
+        return value;
     }
 
     std::vector<u64> index_vec(length);

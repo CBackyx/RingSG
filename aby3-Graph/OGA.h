@@ -18,7 +18,8 @@ enum AggregationOp {
     NONE_AGG,
     ADD_AGG,
     MIN_AGG,
-    MAX_AGG
+    MAX_AGG,
+    OR_AGG
 };
 
 void byteMat2intMat(
