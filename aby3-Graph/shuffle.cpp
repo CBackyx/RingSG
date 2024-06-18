@@ -156,11 +156,11 @@ void shuffle(
 }
 
 void reverse_shuffle(
-    Channel& prevChl,
     Channel& nextChl,
+    Channel& prevChl,
     int role,
-    const std::vector<u64>& prevPerm,
     const std::vector<u64>& nextPerm,
+    const std::vector<u64>& prevPerm,
     const sbMatrix& input,
     sbMatrix& output,
     Sh3Encryptor& enc

@@ -156,6 +156,7 @@ void GraphSC::construct_table_from_raw_graph() {
     printf("number of edges = %ld\n", num_edges);
     printf("number of vertices = %ld\n", table_rows - num_edges);
     
+    table.resize(table_rows, table_cols * 64);
     if (role == 0) enc.localBinMatrix(rt.noDependencies(), plainTable, table).get();
     else enc.remoteBinMatrix(rt.noDependencies(), table).get();
     
@@ -191,6 +192,9 @@ void GraphSC::generate_shuffle_and_preprocess() {
     );
     inv_shuffle2_prev = get_inverse_permutation(shuffle2_prev);
     inv_shuffle2_next = get_inverse_permutation(shuffle2_next);
+
+    common_src.resize(table_rows);
+    for (u64 i = 0; i < table_rows; ++i) common_src[i] = i;
 
     // print_duration(t_shuffle_preprocess, "duration shuffle preprocess");
 }
@@ -305,6 +309,9 @@ void GraphSC::run() {
     sbMatrix concat_src;
     concat_src_with_is_edge(table, concat_src);
     open_sort_by_src = common_src;
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << role << " begin open sort by src." << std::endl;
+    std::cout << IoStream::unlock;    
     ss_open_sort(
         concat_src,
         open_sort_by_src,
@@ -314,6 +321,9 @@ void GraphSC::run() {
         enc
     );
     inv_open_sort_by_src = get_inverse_permutation(open_sort_by_src);
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << role << " finish open sort by src." << std::endl;
+    std::cout << IoStream::unlock;    
 
     sbMatrix concat_dst;
     concat_dst_with_is_edge(table, concat_dst);
@@ -329,6 +339,9 @@ void GraphSC::run() {
         enc
     );
     open_sort_by_dst = common_src;
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << role << " begin open sort by dst." << std::endl;
+    std::cout << IoStream::unlock;    
     ss_open_sort(
         concat_dst,
         open_sort_by_dst,
@@ -338,6 +351,9 @@ void GraphSC::run() {
         enc
     );
     inv_open_sort_by_dst = get_inverse_permutation(open_sort_by_dst);
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << role << " finish open sort by dst." << std::endl;
+    std::cout << IoStream::unlock;    
 
     // print_duration(t_open_sort, "t_open_sort");
 
@@ -370,6 +386,7 @@ void GraphSC::run() {
         }        
     }
     tmp_flag = open_permute(tmp_flag, open_sort_by_src);
+    is_edge_before_Scatter.reset(tmp_flag.rows(), 1);
     if (role == 0 || role == 1)
         enc.localPackedBinary(rt.noDependencies(), tmp_flag, 1, is_edge_before_Scatter).get();
     else
@@ -398,6 +415,7 @@ void GraphSC::run() {
         }        
     }
     tmp_flag = open_permute(tmp_flag, open_sort_by_dst);
+    is_vertex_before_Gather.reset(tmp_flag.rows(), 1);
     if (role == 0 || role == 1)
         enc.localPackedBinary(rt.noDependencies(), tmp_flag, 1, is_vertex_before_Gather).get();
     else
@@ -449,6 +467,9 @@ void GraphSC::run() {
         );
 
         // print_duration(t_iter, "duration per GAS iter");
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << role << " iter = " << i << std::endl;
+        std::cout << IoStream::unlock;
     }
     // table[3] = data_col;
     fill_col(table, data_col, 3);

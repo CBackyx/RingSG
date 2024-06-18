@@ -1239,8 +1239,41 @@ void Sh3_Graph_GraphSC_test() {
         num_iters: 5
     };
 
-    std::string file_path = "./../test-data/small_graph.csv";
-    DataFrame df = load_dataframe_from_csv(file_path, false, false);
+    u64 numP = 5;
+    u64 numVertexPerP = (1 << 10);
+    u64 numIntraEdgePerP = (1 << 10);
+    u64 numInterEdgePerPair = (1 << 10);
+    std::vector<u64> numVertexList(numP, numVertexPerP);
+    std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
+    std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numVertexPerP; ++j)
+            vertexIdLists[i][j] = i * numVertexPerP + j;
+    }
+    vertexDataLists[0][0] = 1;
+    std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
+    std::vector<std::vector<std::vector<std::array<u64, 2>>>> edgeLists(numP, std::vector<std::vector<std::array<u64, 2>>>(numP));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            if (i == j) {
+                numEdgeMat[i][j] = numIntraEdgePerP;
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+            } else {
+                numEdgeMat[i][j] = numInterEdgePerPair;
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+            }
+        }
+    }  
+
+    // std::string file_path = "./../test-data/small_graph.csv";
+    DataFrame df; // = load_dataframe_from_csv(file_path, false, false);
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            for (u64 k = 0; k < edgeLists[i][j].size(); ++k)
+                df.push_back({(double)edgeLists[i][j][k][0], (double)edgeLists[i][j][k][1]});
+        }
+    }
+
     u64 bitSize = 64;
 
     BetaLibrary lib;
@@ -1608,6 +1641,10 @@ void Sh3_Graph_CoGNN_test()
             gatherServerThrd.join();
             gatherHelperThrd.join();
             serverVertexDatas[pIdx] = serverVertexDatas[(pIdx - 1 + numP) % numP];
+
+            // std::cout << IoStream::lock;
+            // std::cout << "pIdx::" << pIdx << " iter = " << iter << std::endl;
+            // std::cout << IoStream::unlock;
         }
     
         serverComms[(pIdx - 1 + numP) % numP].mPrev.asyncSendCopy(serverVertexDatas[(pIdx - 1 + numP) % numP].data(), serverVertexDatas[(pIdx - 1 + numP) % numP].size());
