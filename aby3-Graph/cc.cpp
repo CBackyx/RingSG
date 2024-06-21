@@ -56,11 +56,19 @@ void gather(
         sortedUpdateTag[i] = dstTagIdx[i][0];
     }
     Matrix<u8> sortedUpdateShare(updateShare.rows(), updateShare.cols());
-    run_OEP(
+    // run_OEP(
+    //     prevChl,
+    //     nextChl,
+    //     role,
+    //     sortUpdateSrc, 
+    //     sortUpdateDst, 
+    //     updateShare,
+    //     sortedUpdateShare        
+    // );
+    run_OP(
         prevChl,
         nextChl,
         role,
-        sortUpdateSrc, 
         sortUpdateDst, 
         updateShare,
         sortedUpdateShare        

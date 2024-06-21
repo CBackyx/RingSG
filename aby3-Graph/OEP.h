@@ -24,3 +24,12 @@ void run_OEP(
     oc::Matrix<aby3::u8>& outputShare
 );
 
+void run_OP(
+    oc::Channel& prevChl,
+    oc::Channel& nextChl,
+    int role,
+    const std::vector<aby3::u64>& perm, 
+    const oc::Matrix<aby3::u8>& inputShare,
+    oc::Matrix<aby3::u8>& outputShare
+);
+

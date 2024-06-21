@@ -320,4 +320,52 @@ namespace osuCrypto
         ///std::cout << "p0" << prng.get<int>() << std::endl;
 
     }
+
+    void OblvPermutation::OPClient(Channel& serverChl, Channel& helperChl, std::vector<u64> perm, Matrix<u8> src, MatrixView<u8> dest, OutputType type) {
+        // Randomize src with helper
+        block seed = toBlock(1, -1);
+        PRNG prng(seed, 256);
+        Matrix<u8> tmp = src;
+        tmp.setZero();
+        prng.get(tmp.data(), tmp.size());
+        for (u64 i = 0; i < tmp.size(); ++i) src(i) ^= tmp(i);
+
+        dest.setZero();
+
+        std::vector<u32> tmp_perm(perm.size(), 0);
+        for (u64 i = 0; i < tmp_perm.size(); ++i) tmp_perm[i] = (u32)perm[i];
+        program(serverChl, helperChl, tmp_perm, prng, dest, "tmp_tag", type);
+        for (u64 i = 0; i < src.rows(); ++i) {
+            for (u64 j = 0; j < src.cols(); ++j) {
+                // printf("%d ", dest[i][j]);
+                // printf("%d ", src[perm[i]][j]);
+                dest[perm[i]][j] ^= src[i][j]; // Fixme: need confirm
+                // printf("%d \n", dest[i][j]);
+            }
+        }
+
+
+    }
+
+    void OblvPermutation::OPServer(Channel& clientChl, Channel& helperChl, Matrix<u8> src, MatrixView<u8> dest, OutputType type) {
+        helperChl.asyncSendCopy(src.data(), src.size());
+
+        dest.setZero();
+
+        recv(clientChl, helperChl, dest, src.rows(), "tmp_tag", type);
+    }
+
+    void OblvPermutation::OPHelper(Channel& clientChl, Channel& serverChl, u64 srcRows, u64 srcRowWidth) {
+        Matrix<u8> src(srcRows, srcRowWidth);
+        serverChl.recv(src.data(), src.size());
+        // Randomize src with client
+        Matrix<u8> tmp = src;
+        tmp.setZero();
+        block seed = toBlock(1, -1);
+        PRNG prng(seed, 256);
+        prng.get(tmp.data(), tmp.size());
+        for (u64 i = 0; i < tmp.size(); ++i) src(i) ^= tmp(i);
+
+        send(clientChl, serverChl, src, "tmp_tag");
+    }
 }

@@ -453,6 +453,17 @@ void Sh3_Graph_OGA_test()
             }
         }
 
+        u64 sent = 0, recv = 0;
+        sent += comms[pIdx].mPrev.getTotalDataSent();
+        sent += comms[pIdx].mNext.getTotalDataSent();
+        recv += comms[pIdx].mPrev.getTotalDataRecv();
+        recv += comms[pIdx].mNext.getTotalDataRecv();
+
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << pIdx << " " << std::endl;
+        std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+            << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+        std::cout << IoStream::unlock;
     };
 
     auto t0 = std::thread(routine, 0);
@@ -1657,11 +1668,17 @@ void Sh3_Graph_CoGNN_test()
         for (u64 i = 0; i < numP; ++i) {
             if (i != pIdx) {
                 sent += clientComms[i].mPrev.getTotalDataSent();
+                sent += clientComms[i].mNext.getTotalDataSent();
                 recv += clientComms[i].mPrev.getTotalDataRecv();
+                recv += clientComms[i].mNext.getTotalDataRecv();
                 sent += serverComms[i].mNext.getTotalDataSent();
+                sent += serverComms[i].mPrev.getTotalDataSent();
                 recv += serverComms[i].mNext.getTotalDataRecv();
+                recv += serverComms[i].mPrev.getTotalDataRecv();
                 sent += helperComms[i].mNext.getTotalDataSent();
+                sent += helperComms[i].mPrev.getTotalDataSent();
                 recv += helperComms[i].mNext.getTotalDataRecv();
+                recv += helperComms[i].mPrev.getTotalDataRecv();
             }
         }
         for (u64 i = 0; i < delClientChls.size(); ++i) {

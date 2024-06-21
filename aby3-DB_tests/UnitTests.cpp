@@ -27,4 +27,5 @@ oc::TestCollection DB_tests([](oc::TestCollection& tc) {
     
     tc.add("OEP_test                     ", OEP_test);
     tc.add("full_OEP_test                ", full_OEP_test);
+    tc.add("full_OP_test                ", full_OP_test);
 });

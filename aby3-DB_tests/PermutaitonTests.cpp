@@ -837,7 +837,7 @@ void full_OEP_test()
     u64 destSize = (1 << 20);
     // printf("srcSize = %lu\n", srcSize);
     // printf("destSize = %lu\n", destSize);
-    u64 bytes = 8;
+    u64 bytes = 1;
 
     Matrix<u8> src0(srcSize, bytes), src1(srcSize, bytes);
     Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
@@ -932,6 +932,175 @@ void full_OEP_test()
         {
             auto s = destTag[i];
             auto d = i;
+
+            for (auto j = 0ull; j < bytes; ++j)
+            {
+                if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                {
+                    failed = true;
+                }
+            }
+
+            if (print)
+            {
+                std::cout << "d[" << d << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                {
+                    if ((dest0(d, j) ^ dest1(d, j)) != (src0(s, j) ^ src1(s, j)))
+                        std::cout << Color::Red;
+                    std::cout << ' ' << std::setw(2) << std::hex << int(dest0(d, j) ^ dest1(d, j)) << ColorDefault;
+                }
+                std::cout << "\ns[" << s << "] = ";
+                for (auto j = 0ull; j < bytes; ++j)
+                    std::cout << ' ' << std::setw(2) << std::hex << int(src0(s, j) ^ src1(s, j));
+
+                std::cout << std::endl << std::dec;
+            }
+
+
+        }
+
+        if (failed)
+            throw std::runtime_error("");
+
+    }
+}
+
+void full_OP_test()
+{
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel();
+    Channel chl10 = s10.addChannel();
+    Channel chl02 = s02.addChannel();
+    Channel chl20 = s20.addChannel();
+    Channel chl12 = s12.addChannel();
+    Channel chl21 = s21.addChannel();
+
+
+    // u64 trials = 100;
+    // u64 srcSize = 50;
+    // u64 destSize = srcSize / 2;
+    u64 trials = 1;
+    u64 srcSize = (1 << 20);
+    u64 destSize = (1 << 20);
+    // printf("srcSize = %lu\n", srcSize);
+    // printf("destSize = %lu\n", destSize);
+    u64 bytes = 1;
+
+    Matrix<u8> src0(srcSize, bytes), src1(srcSize, bytes);
+    Matrix<u8> dest0(destSize, bytes), dest1(destSize, bytes);
+    std::vector<u64> perm(srcSize, 0);
+
+    for (auto t = 0ull; t < trials; ++t)
+    {
+        PRNG prng(toBlock(t));
+
+        prng.get(src0.data(), src0.size());
+        prng.get(src1.data(), src1.size());
+
+        //for (auto i = 0; i < src.rows(); ++i)
+        //{
+        //    std::cout << "s[" << i << "] = ";
+        //    for (auto j = 0; j < src.cols(); ++j)
+        //    {
+        //        std::cout << " " << std::setw(2) << std::hex << int(src(i, j));
+        //    }
+        //    std::cout << std::endl << std::dec;
+        //}
+
+        auto getRandomPerm = [](PRNG& prng, u64 length) {
+            std::vector<u64> perm(length, 0);
+            for (i64 i = 0; i < length; ++i) perm[i] = u64(i);
+            for (i64 i = length - 1; i >= 0; --i) {
+                //generate a random number [0, n-1]
+                i64 j = prng.get<u64>() % (i+1);
+
+                //swap the last element with element at random index
+                u64 temp = perm[i];
+                perm[i] = perm[j];
+                perm[j] = temp;
+            }    
+            return perm;
+        };
+        perm = getRandomPerm(prng, srcSize);
+
+        auto t0 = std::thread([&]() {
+            setThreadName("t0");
+            OblvPermutation oblvPerm;
+            // void OPClient(Channel& serverChl, Channel& helperChl, std::vector<u32> perm, Matrix<u8> src, MatrixView<u8> dest, OutputType type = OutputType::Overwrite);
+            oblvPerm.OPClient(chl01, chl02, perm, src0, dest0);
+
+            u64 sent = 0, recv = 0;
+            sent += chl02.getTotalDataSent();
+            sent += chl01.getTotalDataSent();
+            recv += chl02.getTotalDataRecv();
+            recv += chl01.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 0 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
+        });
+
+        auto t1 = std::thread([&]() {
+            setThreadName("t1");
+            OblvPermutation oblvPerm;
+            // void OPServer(Channel& clientChl, Channel& helperChl, Matrix<u8> src, MatrixView<u8> dest, OutputType type = OutputType::Overwrite);
+            oblvPerm.OPServer(chl10, chl12, src1, dest1);
+
+            u64 sent = 0, recv = 0;
+            sent += chl10.getTotalDataSent();
+            sent += chl12.getTotalDataSent();
+            recv += chl10.getTotalDataRecv();
+            recv += chl12.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 1 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
+        });
+
+        auto t2 = std::thread([&]() {
+            setThreadName("t2");
+            OblvPermutation oblvPerm;
+            // void OPHelper(Channel& clientChl, Channel& serverChl, u64 srcRows, u64 srcRowWidth, std::string tag);
+            oblvPerm.OPHelper(chl20, chl21, srcSize, bytes);
+
+            u64 sent = 0, recv = 0;
+            sent += chl20.getTotalDataSent();
+            sent += chl21.getTotalDataSent();
+            recv += chl20.getTotalDataRecv();
+            recv += chl21.getTotalDataRecv();
+
+            std::cout << IoStream::lock;
+            std::cout << "pIdx::" << 2 << " " << std::endl;
+            std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+                << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+            std::cout << IoStream::unlock;
+        });
+
+        t0.join();
+        t1.join();
+        t2.join();
+
+
+        bool print = false;
+        if (print)
+            std::cout << std::endl;
+        bool failed = false;
+        for (u64 i = 0; i < destSize; ++i)
+        {
+            auto s = i;
+            auto d = perm[i];
 
             for (auto j = 0ull; j < bytes; ++j)
             {
