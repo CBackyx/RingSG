@@ -1737,16 +1737,18 @@ void Sh3_Graph_GraphSC_test() {
     //bool manual = false;
 
     GraphParam param = GraphParam {
-        num_iters: 5
+        num_iters: 5,
+        alg: Alg::SP
     };
+    u64 scale = 10;
 
     u64 numP = 5;
-    u64 numVertexPerP = (1 << 10);
-    u64 numIntraEdgePerP = (1 << 10);
-    u64 numInterEdgePerPair = (1 << 10);
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
-    std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
+    std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
         for (u64 j = 0; j < numVertexPerP; ++j)
             vertexIdLists[i][j] = i * numVertexPerP + j;

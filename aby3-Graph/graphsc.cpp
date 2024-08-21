@@ -246,14 +246,30 @@ void GraphSC::vectorized_scatter(sbMatrix& propagated_vertex_col, sbMatrix& data
 
     BetaLibrary lib;
     auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    auto ltCir_64 =  lib.int_int_lt(64, 64);
+    auto addCir_64 =  lib.int_int_add(64, 64, 64);
+    auto multCir_64 = lib.int_int_mult(64, 64, 64);
     auto multiplexCir =  lib.int_int_multiplex(64);
     u64 width = data_col.rows();
 
-    eval.setCir(orCir_64, width, gen);
-    eval.setInput(0, data_col);
-    eval.setInput(1, propagated_vertex_col);
-    eval.asyncEvaluate(rt.noDependencies()).get();
-    eval.getOutput(0, scattered);
+    if (this->param.alg == Alg::SP) {
+        eval.setCir(addCir_64, width, gen);
+        eval.setInput(0, data_col);
+        eval.setInput(1, propagated_vertex_col);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, scattered);
+    } else if (this->param.alg == Alg::CC) {
+        scattered = propagated_vertex_col;
+    } else if (this->param.alg == Alg::PR) {
+        eval.setCir(multCir_64, width, gen);
+        eval.setInput(0, data_col);
+        eval.setInput(1, propagated_vertex_col);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, scattered);
+    } else {
+        printf("Unexpected Scatter Op in GraphSC!\n");
+        exit(-1);        
+    }
     // sci::twoPartyAdd(data_col, propagated_vertex_col, scattered, party_id, party, SCALER_BITS);
     // sci::twoPartySelectedAssign(data_col, scattered, is_edge_before_Scatter, party_id, party, SCALER_BITS);
     eval.setCir(multiplexCir, width, gen);
@@ -269,10 +285,22 @@ void GraphSC::vectorized_gather(sbMatrix& dst_vertex_col, sbMatrix& data_col) {
     auto multiplexCir =  lib.int_int_multiplex(64);
     u64 width = data_col.rows();
 
+    AggregationOp aop;
+    if (this->param.alg == Alg::CC) {
+        aop = AggregationOp::OR_AGG;
+    } else if (this->param.alg == Alg::SP) {
+        aop = AggregationOp::MIN_AGG;
+    } else if (this->param.alg == Alg::PR) {
+        aop = AggregationOp::ADD_AGG;
+    } else {
+        printf("Unexpected Scatter Op in CoGNN!\n");
+        exit(-1);
+    }
+
     sbMatrix agg_result = prefix_network_aggregate(
         dst_vertex_col, 
         data_col, 
-        AggregationOp::MIN_AGG,
+        aop,
         eval,
         gen,
         rt,
@@ -312,14 +340,14 @@ void GraphSC::run() {
     std::cout << IoStream::lock;
     std::cout << "pIdx::" << role << " begin open sort by src." << std::endl;
     std::cout << IoStream::unlock;    
-    ss_open_sort(
-        concat_src,
-        open_sort_by_src,
-        eval,
-        gen,
-        rt,
-        enc
-    );
+    // ss_open_sort(
+    //     concat_src,
+    //     open_sort_by_src,
+    //     eval,
+    //     gen,
+    //     rt,
+    //     enc
+    // );
     inv_open_sort_by_src = get_inverse_permutation(open_sort_by_src);
     std::cout << IoStream::lock;
     std::cout << "pIdx::" << role << " finish open sort by src." << std::endl;
@@ -342,14 +370,14 @@ void GraphSC::run() {
     std::cout << IoStream::lock;
     std::cout << "pIdx::" << role << " begin open sort by dst." << std::endl;
     std::cout << IoStream::unlock;    
-    ss_open_sort(
-        concat_dst,
-        open_sort_by_dst,
-        eval,
-        gen,
-        rt,
-        enc
-    );
+    // ss_open_sort(
+    //     concat_dst,
+    //     open_sort_by_dst,
+    //     eval,
+    //     gen,
+    //     rt,
+    //     enc
+    // );
     inv_open_sort_by_dst = get_inverse_permutation(open_sort_by_dst);
     std::cout << IoStream::lock;
     std::cout << "pIdx::" << role << " finish open sort by dst." << std::endl;

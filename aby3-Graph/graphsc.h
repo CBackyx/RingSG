@@ -2,9 +2,11 @@
 
 // #include "graph_common.h"
 #include "sort.h"
+#include "operators.h"
 
 struct GraphParam {
     int num_iters;
+    Alg alg;
 };
 typedef struct GraphParam GraphParam;
 
@@ -59,4 +61,5 @@ public:
 
     size_t table_rows;
     size_t table_cols;
+
 };
