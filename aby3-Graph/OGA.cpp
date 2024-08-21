@@ -633,6 +633,103 @@ void run_ConditionalMerge(
     intMat2ByteMat(dd, d, 1);
 }
 
+void run_ConditionalMerge(
+    Channel& prevChl,
+    Channel& nextChl,
+    int role,
+    const i64Matrix& a,
+    const i64Matrix& b,
+    const Matrix<u8>& c,
+    i64Matrix& d,
+    BetaCircuit* mergeCir,
+    bool isConditional,
+    bool isRevealAll
+) {
+    u64 wordSize = a.cols();
+    u64 byteSize = wordSize * 8;
+    u64 bitSize = wordSize * 64;
+    u64 width = a.rows();
+    if (width != b.rows()) {
+        printf("Unequal sizes of a and b during run_ConditionalMerge!\n");
+        exit(-1);
+    }
+
+    // Convert input to secret form
+    CommPkg comm = {prevChl, nextChl};
+    Sh3Runtime rt(role, comm);
+    Sh3Encryptor enc;
+    enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+    Sh3BinaryEvaluator eval;    
+    eval.mPrng.SetSeed(toBlock(role));
+    Sh3ShareGen gen;
+    gen.init(toBlock(role), toBlock((role + 1) % 3));
+
+    d.resize(a.rows(), wordSize);
+
+    sbMatrix A(width, bitSize);
+    sbMatrix B(width, bitSize);
+    sbMatrix D(width, bitSize);
+
+    auto task = rt.noDependencies();
+    
+    if (role == 0 || role == 1) {
+    // if (role == 1) {
+        task = enc.localBinMatrix(task, a, A);
+        task = enc.localBinMatrix(task, b, B);
+    } else {
+        task = enc.remoteBinMatrix(task, A);
+        task = enc.remoteBinMatrix(task, B);
+    } 
+
+    task.get();
+
+    if (isConditional) {
+        sPackedBin C(width, 1);
+        if (role == 0) {
+            task = enc.localPackedBinary(task, c, 1, C);  
+        } else {
+            task = enc.remotePackedBinary(task, C);  
+        }   
+        task.get();
+
+        BetaCircuit cd;
+        get_multiplex_Circ(cd, bitSize);
+        BetaCircuit *multiplexCir = &cd;
+
+        evalConditionalMerge(
+            A,
+            B,
+            C,
+            D,
+            width,
+            bitSize,
+            mergeCir,
+            multiplexCir,
+            eval,
+            gen,
+            rt
+        );
+    } else {
+        evalMerge(
+            A,
+            B,
+            D,
+            width,
+            bitSize,
+            mergeCir,
+            eval,
+            gen,
+            rt
+        );
+    }
+
+    if (isRevealAll)
+        task = enc.revealAll(task, D, d);
+    else
+        task = enc.revealToTwoParty(task, D, d);
+    task.get();
+}
+
 void get_merge_sequence(
     const std::vector<u64>& index_vec, 
     std::vector<std::vector<u64>>& sequence

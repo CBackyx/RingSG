@@ -85,6 +85,19 @@ void run_ConditionalMerge(
     bool isRevealAll = true
 );
 
+void run_ConditionalMerge(
+    oc::Channel& prevChl,
+    oc::Channel& nextChl,
+    int role,
+    const aby3::i64Matrix& a,
+    const aby3::i64Matrix& b,
+    const oc::Matrix<aby3::u8>& c,
+    aby3::i64Matrix& d,
+    oc::BetaCircuit* mergeCir,
+    bool isConditional,
+    bool isRevealAll = true
+);
+
 aby3::sbMatrix prefix_network_aggregate(
     const aby3::sbMatrix& group_id,
     const aby3::sbMatrix& value,
