@@ -341,6 +341,154 @@ void Sh3_Graph_multiplex_test()
         throw std::runtime_error(LOCATION);
 }
 
+void Sh3_Graph_compare_select_test()
+{
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 wordSize = 1;
+    u64 bitSize = wordSize << 6;
+
+    u64 width = 1 << 20;
+    bool failed = false;
+    //bool manual = false;
+
+    Sh3BinaryEvaluator evals[3];
+
+    i64Matrix a_0(width, wordSize), a_1(width, wordSize), b_0(width, wordSize), b_1(width, wordSize);
+    PRNG prng(ZeroBlock);
+    prng.get(a_0.data(), a_0.size());
+    prng.get(a_1.data(), a_1.size());
+    prng.get(b_0.data(), b_0.size());
+    prng.get(b_1.data(), b_1.size());
+
+    auto routine = [&](int pIdx) {
+
+        BetaCircuit cd;
+        get_compare_select_Circ(cd, bitSize);
+        BetaCircuit *cir = &cd;
+
+        cir->levelByAndDepth();
+
+        //auto i = 0;
+        i64Matrix a_2(width, wordSize);
+        i64Matrix b_2(width, wordSize);
+        a_2.setZero();
+        b_2.setZero();
+
+        Sh3Runtime rt(pIdx, comms[pIdx]);
+
+        sbMatrix A_0(width, bitSize), A_1(width, bitSize), B_0(width, bitSize), B_1(width, bitSize), A_2(width, bitSize), B_2(width, bitSize);
+
+        Sh3Encryptor enc;
+        enc.init(pIdx, toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        // auto task = rt.noDependencies();
+
+        if (pIdx == 0) {
+            enc.localBinMatrix(rt.noDependencies(), a_0, A_0).get();
+            enc.localBinMatrix(rt.noDependencies(), b_0, B_0).get();
+        } else {
+            enc.remoteBinMatrix(rt.noDependencies(), A_0).get();
+            enc.remoteBinMatrix(rt.noDependencies(), B_0).get();
+        }
+
+        if (pIdx == 1) {
+            enc.localBinMatrix(rt.noDependencies(), a_1, A_1).get();
+            enc.localBinMatrix(rt.noDependencies(), b_1, B_1).get();
+        } else {
+            enc.remoteBinMatrix(rt.noDependencies(), A_1).get();
+            enc.remoteBinMatrix(rt.noDependencies(), B_1).get();
+        }
+
+        auto& eval = evals[pIdx];
+
+        eval.mPrng.SetSeed(toBlock(pIdx));
+
+        //eval.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+        //if (pIdx == 0)
+        //    oc::lout << "---------------------------------------" << std::endl;
+
+        Sh3ShareGen gen;
+        gen.init(toBlock(pIdx), toBlock((pIdx + 1) % 3));
+
+        // case Manual:
+        // task.get();
+        eval.setCir(cir, width, gen);
+        eval.setInput(0, A_0);
+        eval.setInput(1, A_1);
+        eval.setInput(2, B_0);
+        eval.setInput(3, B_1);
+        eval.asyncEvaluate(rt.noDependencies()).get();
+        eval.getOutput(0, A_2);
+        eval.getOutput(1, B_2);
+        
+        // task = eval.asyncEvaluate(task, cir, gen, { &A, &B, &C }, { &D });
+
+        // task.get();
+
+        // printf("++ %lu %lu\n", d.rows(), d.cols());
+        enc.revealAll(rt.noDependencies(), A_2, a_2).get();
+        enc.revealAll(rt.noDependencies(), B_2, b_2).get();
+
+        if (rt.mPartyIdx == 0) {
+            for (u64 i = 0; i < width; ++i)
+            {
+                if ((u64)a_0(i, 0) < (u64)a_1(i,0)) {
+                    if ((a_2(i, 0) != a_0(i, 0)) || (b_2(i, 0) != b_0(i, 0))) {
+                        oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " 
+                            << u64(a_0(i, 0)) << " " << u64(a_1(i, 0)) << " " << u64(a_2(i, 0)) << " " << u64(b_0(i, 0)) << " " << u64(b_1(i, 0)) << " " << u64(b_2(i, 0)) << std::endl << std::dec;
+                        failed = true;
+                    } else {
+                        // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+                        //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                    }
+                } else {
+                    if ((a_2(i, 0) != a_1(i, 0)) || (b_2(i, 0) != b_1(i, 0))) {
+                        oc::lout << Color::Red << "pidx: " << rt.mPartyIdx << " failed at " << i << " " 
+                            << u64(a_0(i, 0)) << " " << u64(a_1(i, 0)) << " " << u64(a_2(i, 0)) << " " << u64(b_0(i, 0)) << " " << u64(b_1(i, 0)) << " " << u64(b_2(i, 0)) << std::endl << std::dec;
+                        failed = true;
+                    } else {
+                        // oc::lout << Color::Green << "pidx: " << rt.mPartyIdx << " success at " << i << " " << j << " " 
+                        //     << std::setw(2) << std::hex << int(c(i, 0)) << " " << int(a(i, j)) << " " << int(b(i, j)) << " " << int(d(i, j)) << std::endl << std::dec;
+                    }
+                }
+                
+            }
+        }
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
+}
 
 void Sh3_Graph_OGA_test()
 {

@@ -1,4 +1,5 @@
 void Sh3_Graph_multiplex_test();
+void Sh3_Graph_compare_select_test();
 void Sh3_Graph_OGA_test();
 void Sh3_Graph_CC_test();
 void Sh3_Graph_eq_test();

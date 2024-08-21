@@ -13,3 +13,8 @@ void get_multiplex_Circ(
     oc::BetaCircuit& cd,
     aby3::u64 elementSize
 );
+
+void get_compare_select_Circ(
+    oc::BetaCircuit& cd,
+    aby3::u64 elementSize
+);
