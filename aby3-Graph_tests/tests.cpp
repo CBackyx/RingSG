@@ -1332,15 +1332,17 @@ void Sh3_Graph_Ours_single_party(unsigned long long pIndex)
     computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
     computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
     computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
-    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex - 1 + numP) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
-    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex - 1 + numP) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
-    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP + 2) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // // ---->
     // computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
     // computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
     // computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
-    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * (pIndex - 1) + 0, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
-    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * (pIndex - 1) + 1, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
-    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP + 2) % numP + 1), baseComPort + 3 * (pIndex - 1) + 2, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP + 2) % numP + 1), baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // // <----
     // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
     // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * serverDstIdx + 0, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
     // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-02"));
@@ -1362,13 +1364,14 @@ void Sh3_Graph_Ours_single_party(unsigned long long pIndex)
     for (u64 j = 0; j < 6; ++j)
         computeChls.emplace_back(computeSessions[j].addChannel("c"));     
 
+    // ---->
     // for (u64 j = 0; j < numP; ++j) {
     //     if (pIndex == j) 
     //         delegateClientSessions.emplace_back(Session());
     //     else if (pIndex < j)
-    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + j, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
     //     else
-    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + pIndex, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
     // }
 
 
@@ -1381,15 +1384,45 @@ void Sh3_Graph_Ours_single_party(unsigned long long pIndex)
     //     if (pIndex == j) 
     //         delegateServerSessions.emplace_back(Session());
     //     else if (pIndex < j)
-    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
     //     else
-    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
     // }  
 
     // for (u64 j = 0; j < numP; ++j) {
     //     if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
     //     else delegateServerChls.emplace_back(Channel());
-    // }    
+    // }  
+    // // <----  
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateClientSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    }
+
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateClientChls.emplace_back(delegateClientSessions[j].addChannel("c"));
+        else delegateClientChls.emplace_back(Channel());
+    }    
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateServerSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    }  
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
+        else delegateServerChls.emplace_back(Channel());
+    }    
 
     // // Initialize graph data
     // // Vertex tag \in {0, 1}
