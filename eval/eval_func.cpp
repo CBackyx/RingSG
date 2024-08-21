@@ -1,6 +1,7 @@
 #include "eval_func.h"
 
 #include <cryptoTools/Common/CLP.h>
+#include <thread>
 
 #include "aby3_tests/aby3_tests.h"
 #include <tests_cryptoTools/UnitTests.h>
@@ -26,9 +27,20 @@ using namespace oc;
 using namespace aby3;
 
 
-void eval_ours()
+void eval_ours(int pIdx)
 {
     auto t_tmp = std::chrono::high_resolution_clock::now();
-	Sh3_Graph_CC_test();
+	// Sh3_Graph_CC_test();
+
+    std::vector<std::thread> thrds;
+    u64 numP = 5;
+    for (u64 i = 0; i < numP; ++i)
+        thrds.emplace_back(std::thread(Sh3_Graph_Ours_single_party, i));
+
+    for (u64 i = 0; i < numP; ++i)
+        thrds[i].join();
+
+    // Sh3_Graph_Ours_single_party(pIdx);
+
     print_duration(t_tmp, "ours");
 }
