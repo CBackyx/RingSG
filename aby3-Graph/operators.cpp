@@ -84,3 +84,40 @@ void get_compare_select_Circ(
       temp_1
     );  
 }
+
+void get_min_Circ(
+    BetaCircuit& cd,
+    u64 elementSize
+) {
+    BetaLibrary lib;
+
+    BetaBundle a_0(elementSize);
+    BetaBundle a_1(elementSize);
+    BetaBundle c(1);
+    BetaBundle a_2(elementSize);
+    BetaBundle temp_0(elementSize);
+
+    cd.addInputBundle(a_0);
+    cd.addInputBundle(a_1);
+    cd.addTempWireBundle(c);
+    cd.addOutputBundle(a_2);
+    cd.addTempWireBundle(temp_0);
+
+    lib.lessThan_build(
+      cd,
+      a_0, 
+      a_1, 
+      c, 
+      BetaLibrary::IntType::Unsigned,
+      BetaLibrary::Optimized::Size
+    );
+
+    lib.multiplex_build(
+      cd,
+      a_0,
+      a_1,  
+      c, 
+      a_2,
+      temp_0
+    );
+}

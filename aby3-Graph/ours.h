@@ -4,6 +4,12 @@
 #include "OGA.h"
 #include "OEP.h"
 
+enum Alg {
+    CC,
+    SP,
+    PR
+};
+
 void our_scatter(
     oc::Channel& prevChl,
     oc::Channel& nextChl,
@@ -12,7 +18,8 @@ void our_scatter(
     const std::vector<aby3::u64>& srcTag, 
     const std::vector<aby3::u64>& dstTag, 
     const aby3::i64Matrix& inputShare,
-    aby3::i64Matrix& outputShare
+    aby3::i64Matrix& outputShare,
+    Alg alg
 );
 
 void our_gather(
@@ -24,6 +31,7 @@ void our_gather(
     const std::vector<aby3::u64>& vertexTag,
     const aby3::i64Matrix& updateShare,
     const aby3::i64Matrix& vertexShare,
-    aby3::i64Matrix& outputShare
+    aby3::i64Matrix& outputShare,
+    Alg alg
 );
 

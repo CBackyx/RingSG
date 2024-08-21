@@ -967,7 +967,9 @@ void Sh3_Graph_CC_test()
 
 void Sh3_Graph_Ours_test()
 {
+    Alg alg = Alg::CC;
     u64 numP = 5;
+    u64 scale = 10;
     std::vector<u64> pIndices(5, 0);
     for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
 
@@ -1030,9 +1032,9 @@ void Sh3_Graph_Ours_test()
     // Initialize graph data
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
-    u64 numVertexPerP = (1 << 20);
-    u64 numIntraEdgePerP = (1 << 20);
-    u64 numInterEdgePerPair = (1 << 20);
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
@@ -1120,7 +1122,8 @@ void Sh3_Graph_Ours_test()
                 srcTag, 
                 dstTag, 
                 vertexDataShare,
-                updateShare
+                updateShare,
+                alg
             );      
 
             // Decompose update Share and send    
@@ -1240,7 +1243,8 @@ void Sh3_Graph_Ours_test()
                 vertexTag,
                 updateShare,
                 vertexDataShare,
-                updatedVertexDataShare
+                updatedVertexDataShare,
+                alg
             );        
             vertexDataShare = updatedVertexDataShare;
         };

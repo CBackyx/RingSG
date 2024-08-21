@@ -15,13 +15,41 @@ void our_scatter(
     const std::vector<u64>& srcTag, 
     const std::vector<u64>& dstTag, 
     const i64Matrix& inputShare,
-    i64Matrix& outputShare
+    i64Matrix& outputShare,
+    Alg alg
 ) {
+    BetaLibrary lib;
+    auto multCir_64 = lib.int_int_mult(64, 64, 64);
+    auto addCir_64 = lib.int_int_add(64, 64, 64);
+
     u64 byteSize = inputShare.cols() * 8;
+    i64Matrix inputShare_preScatter(inputShare.rows(), inputShare.cols());
+    i64Matrix inputScaler(inputShare.rows(), inputShare.cols());
+    if (alg == Alg::CC) {
+        inputShare_preScatter = inputShare;
+    } else if (alg == Alg::SP) {
+        inputShare_preScatter = inputShare;   
+    } else if (alg == Alg::PR) {
+        run_ConditionalMerge(
+            prevChl,
+            nextChl,
+            role,
+            inputShare,
+            inputScaler,
+            Matrix<u8>(),
+            inputShare_preScatter,
+            multCir_64,
+            false,
+            false        
+        );     
+    } else {
+        printf("Unexpected Scatter Op in Ours!\n");
+        exit(-1);
+    }
     Matrix<u8> inputShare_byte(inputShare.rows(), byteSize);
     Matrix<u8> outputShare_byte(dstTag.size(), byteSize);
     intMat2ByteMat(
-        inputShare,
+        inputShare_preScatter,
         inputShare_byte,
         byteSize
     );
@@ -36,6 +64,29 @@ void our_scatter(
     ); 
     outputShare.resize(outputShare_byte.rows(), inputShare.cols());
     byteMat2intMat(outputShare_byte, outputShare);
+
+    i64Matrix edgeShare(outputShare.rows(), outputShare.cols());
+    if (alg == Alg::CC) {
+        // Do nothing.
+    } else if (alg == Alg::SP) {
+        run_ConditionalMerge(
+            prevChl,
+            nextChl,
+            role,
+            outputShare,
+            edgeShare,
+            Matrix<u8>(),
+            outputShare,
+            addCir_64,
+            false,
+            false        
+        );     
+    } else if (alg == Alg::PR) {
+        // Do nothing
+    } else {
+        printf("Unexpected Scatter Op in Ours!\n");
+        exit(-1);
+    }
 }
 
 void our_gather(
@@ -47,7 +98,8 @@ void our_gather(
     const std::vector<u64>& vertexTag,
     const i64Matrix& updateShare,
     const i64Matrix& vertexShare,
-    i64Matrix& outputShare
+    i64Matrix& outputShare,
+    Alg alg
 ) {
     u64 numUpdates = dstTag.size();
     std::vector<std::array<u64, 2>> dstTagIdx(numUpdates);
@@ -104,7 +156,19 @@ void our_gather(
     i64Matrix aggedUpdateShare_int(updateShare.rows(), updateShare.cols());
 
     BetaLibrary lib;
-    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    BetaCircuit* mergeCir;
+    BetaCircuit minCir;
+    if (alg == Alg::CC) {
+        mergeCir = lib.int_int_bitwiseOr(64, 64, 64);
+    } else if (alg == Alg::SP) {
+        get_min_Circ(minCir, 64);
+        mergeCir = &minCir; 
+    } else if (alg == Alg::PR) {
+        mergeCir = lib.int_int_add(64, 64, 64);    
+    } else {
+        printf("Unexpected Scatter Op in Ours!\n");
+        exit(-1);
+    }    
     // orCir->levelByAndDepth();    
     run_OGA(
         prevChl,
@@ -113,7 +177,7 @@ void our_gather(
         sortedUpdateTag, 
         unaggedUpdateShare_int,
         aggedUpdateShare_int,
-        orCir_64,
+        mergeCir,
         false
     );
     Matrix<u8> aggedUpdateShare(updateShare.rows(), byteSize);
@@ -146,7 +210,7 @@ void our_gather(
         vertexShare,
         Matrix<u8>(),
         outputShare,
-        orCir_64,
+        mergeCir,
         false,
         false        
     );

@@ -18,3 +18,8 @@ void get_compare_select_Circ(
     oc::BetaCircuit& cd,
     aby3::u64 elementSize
 );
+
+void get_min_Circ(
+    oc::BetaCircuit& cd,
+    aby3::u64 elementSize
+);
