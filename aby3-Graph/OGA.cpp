@@ -840,6 +840,7 @@ sbMatrix conditional_merge(
     BetaLibrary lib;
     BetaCircuit *ltCir =  lib.int_int_lt(64, 64);
     BetaCircuit *orCir =  lib.int_int_bitwiseOr(64, 64, 64);
+    BetaCircuit *addCir =  lib.int_int_add(64, 64, 64);
     BetaCircuit *multiplexCir =  lib.int_int_multiplex(bitSize);
 
     sbMatrix agg_result(length, bitSize);
@@ -865,6 +866,14 @@ sbMatrix conditional_merge(
             }
         case AggregationOp::OR_AGG: {
                 eval.setCir(orCir, length, gen);
+                eval.setInput(0, lhs);
+                eval.setInput(1, rhs);
+                eval.asyncEvaluate(rt.noDependencies()).get();
+                eval.getOutput(0, agg_result);
+                break;
+            }
+        case AggregationOp::ADD_AGG: {
+                eval.setCir(addCir, length, gen);
                 eval.setInput(0, lhs);
                 eval.setInput(1, rhs);
                 eval.asyncEvaluate(rt.noDependencies()).get();

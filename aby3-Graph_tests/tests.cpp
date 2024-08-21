@@ -1826,6 +1826,8 @@ void Sh3_Graph_GraphSC_test() {
 
 void Sh3_Graph_CoGNN_test()
 {
+    Alg alg = Alg::PR;
+    u64 scale = 10;
     u64 numP = 5;
     std::vector<u64> pIndices(5, 0);
     for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
@@ -1893,12 +1895,12 @@ void Sh3_Graph_CoGNN_test()
     // Initialize graph data
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
-    u64 numVertexPerP = (1 << 20);
-    u64 numIntraEdgePerP = (1 << 20);
-    u64 numInterEdgePerPair = (1 << 20);
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
-    std::vector<std::vector<u8>> vertexDataLists(numP, std::vector<u8>(numVertexPerP, 0));
+    std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
         for (u64 j = 0; j < numVertexPerP; ++j)
             vertexIdLists[i][j] = i * numVertexPerP + j;
@@ -1947,8 +1949,8 @@ void Sh3_Graph_CoGNN_test()
         // computeComms[2] = { computeChls[helperDstIdx][5], computeChls[helperDstIdx][3] }; // Helper Comms       
         std::vector<Channel>& delClientChls = delegateClientChls[pIdx];
         std::vector<Channel>& delServerChls = delegateServerChls[pIdx];
-        Matrix<u8> clientVertexData(numVertexList[pIdx], 1);
-        std::vector<Matrix<u8>> serverVertexDatas(numP);
+        i64Matrix clientVertexData(numVertexList[pIdx], 1);
+        std::vector<i64Matrix> serverVertexDatas(numP);
         // vertexDatas[0].resize(numVertexList[pIdx], 1);
         // vertexDatas[1].resize(numVertexList[serverDstIdx], 1);
         // vertexDatas[2].resize(numVertexList[helperDstIdx], 1);
@@ -1959,17 +1961,17 @@ void Sh3_Graph_CoGNN_test()
         for (u64 i = 0; i < numVertexList[pIdx]; ++i) {
             clientVertexData(i, 0) = vertexDataLists[pIdx][i];
         }
-        std::vector<Matrix<u8>> clientInterUpdateShare(numP);
-        std::vector<Matrix<u8>> serverInterUpdateShare(numP);
+        std::vector<i64Matrix> clientInterUpdateShare(numP);
+        std::vector<i64Matrix> serverInterUpdateShare(numP);
 
         // Load the data to aby3 plaintext data structure
         // For different characteristics: client, server, helper (maybe in different threads)
-        auto scatterThread = [&](int role, int clientPIdx, int serverPIdx, int dstPIdx, Matrix<u8>& vertexDataShare, Matrix<u8>& updateShare1, int iter, Channel prevChl, Channel nextChl) {
+        auto scatterThread = [&](int role, int clientPIdx, int serverPIdx, int dstPIdx, i64Matrix& vertexDataShare, i64Matrix& updateShare1, int iter, Channel prevChl, Channel nextChl) {
             std::vector<u64> srcVertexTag;
             std::vector<u64> edgeSrcTag;
             std::vector<u64> edgeDstTag;
             std::vector<u64> dstVertexTag;
-            Matrix<u8> updateShare;
+            i64Matrix updateShare;
             int helperPIdx = (serverPIdx + 1) % numP;;
             if (helperPIdx == clientPIdx) helperPIdx = (serverPIdx + 2) % numP;
  
@@ -2025,7 +2027,8 @@ void Sh3_Graph_CoGNN_test()
                 edgeDstTag,
                 dstVertexTag,
                 vertexDataShare,
-                updateShare
+                updateShare,
+                alg
             );      
 
             if (!isLocal && role == 0 && (pIdx != (dstPIdx + 1) % numP)) {
@@ -2039,16 +2042,16 @@ void Sh3_Graph_CoGNN_test()
             }
         };
 
-        auto gatherThread = [&](int role, int clientPIdx, int serverPIdx, int dstPIdx, Matrix<u8>& vertexDataShare, const std::vector<Matrix<u8>>& updateShares, int iter, Channel prevChl, Channel nextChl) {
+        auto gatherThread = [&](int role, int clientPIdx, int serverPIdx, int dstPIdx, i64Matrix& vertexDataShare, const std::vector<i64Matrix>& updateShares, int iter, Channel prevChl, Channel nextChl) {
             u64 numVertex = numVertexList[dstPIdx];
             if (role == 2) {
                 vertexDataShare.resize(numVertex, 1);
                 vertexDataShare.setZero(); 
             }            
             
-            Matrix<u8> updatedVertexDataShare = vertexDataShare;
+            i64Matrix updatedVertexDataShare = vertexDataShare;
             updatedVertexDataShare.setZero();
-            std::vector<Matrix<u8>> orderedUpdateShares(numP);
+            std::vector<i64Matrix> orderedUpdateShares(numP);
             int helperPIdx = (serverPIdx + 1) % numP;;
             if (helperPIdx == clientPIdx) helperPIdx = (serverPIdx + 2) % numP;
 
@@ -2078,7 +2081,8 @@ void Sh3_Graph_CoGNN_test()
                 role,
                 orderedUpdateShares,
                 vertexDataShare,
-                updatedVertexDataShare
+                updatedVertexDataShare,
+                alg
             );        
             vertexDataShare = updatedVertexDataShare;
 
@@ -2096,12 +2100,12 @@ void Sh3_Graph_CoGNN_test()
             // std::thread localScatter(0, pIdx, (pIdx + 1) % numP, pIdx, std::ref(vertexDatas[role][pIdx]), std::ref(interUpdateShare1[role][pIdx]), iter, Channel& prevChl, Channel& nextChl);
             scatterClientThrds.emplace_back(scatterThread, 0, pIdx, (pIdx + 1) % numP, pIdx, std::ref(clientVertexData), std::ref(clientInterUpdateShare[pIdx]), iter, clientComms[(pIdx + 1) % numP].mPrev, clientComms[(pIdx + 1) % numP].mNext);
             scatterServerThrds.emplace_back(scatterThread, 1, (pIdx - 1 + numP) % numP, pIdx, (pIdx - 1 + numP) % numP, std::ref(serverVertexDatas[pIdx]), std::ref(serverInterUpdateShare[pIdx]), iter, serverComms[(pIdx - 1 + numP) % numP].mPrev, serverComms[(pIdx - 1 + numP) % numP].mNext);
-            Matrix<u8> helperShare[2];
+            i64Matrix helperShare[2];
             scatterHelperThrds.emplace_back(scatterThread, 2, (pIdx - 2 + numP) % numP, (pIdx - 1 + numP) % numP, (pIdx - 2 + numP) % numP, std::ref(helperShare[0]), std::ref(helperShare[1]), iter, helperComms[(pIdx - 2 + numP) % numP].mPrev, helperComms[(pIdx - 2 + numP) % numP].mNext);
             scatterClientThrds[0].join();
             scatterServerThrds[0].join();
             scatterHelperThrds[0].join();
-            std::vector<std::array<Matrix<u8>, 2>> helperShares(numP);
+            std::vector<std::array<i64Matrix, 2>> helperShares(numP);
             for (u64 i = 0; i < numP; ++i) {
                 if (i != pIdx) {
                     // int role, int clientPIdx, int serverPIdx, int dstPIdx, Matrix<u8>& vertexDataShare, Matrix<u8>& updateShare1, int iter, Channel& prevChl, Channel& nextChl
@@ -2115,7 +2119,7 @@ void Sh3_Graph_CoGNN_test()
                         clientPIdx = i;
                         serverPIdx = (pIdx - 2 + numP) % numP;                       
                     }
-                    std::array<Matrix<u8>, 2>& helperShare = helperShares[i];
+                    std::array<i64Matrix, 2>& helperShare = helperShares[i];
                     scatterHelperThrds.emplace_back(scatterThread, 2, clientPIdx, serverPIdx, serverPIdx, std::ref(helperShare[0]), std::ref(helperShare[1]), iter, helperComms[i].mPrev, helperComms[i].mNext);
                     // if (i != (pIdx - 1 + numP) % numP) helperComms[i] = { computeChls[i * numP + ((pIdx - 1 + numP) % numP)][5], computeChls[i * numP + ((pIdx - 1 + numP) % numP)][3] };
                     // else helperComms[i] = { computeChls[i * numP + ((pIdx - 2 + numP) % numP)][5], computeChls[i * numP + ((pIdx - 2 + numP) % numP)][3] };
@@ -2127,13 +2131,13 @@ void Sh3_Graph_CoGNN_test()
                 scatterHelperThrds[i].join();
             }
 
-            std::vector<Matrix<u8>> clientUpdateShare = serverInterUpdateShare;
+            std::vector<i64Matrix> clientUpdateShare = serverInterUpdateShare;
             clientUpdateShare[pIdx] = clientInterUpdateShare[pIdx];
-            std::vector<Matrix<u8>> serverUpdateShare(2);
+            std::vector<i64Matrix> serverUpdateShare(2);
             serverUpdateShare[0] = clientInterUpdateShare[(pIdx - 1 + numP) % numP];
             serverUpdateShare[1] = serverInterUpdateShare[pIdx];
 
-            std::vector<Matrix<u8>> helperShareVec;
+            std::vector<i64Matrix> helperShareVec;
             // int role, int clientPIdx, int serverPIdx, int dstPIdx, Matrix<u8>& vertexDataShare, const std::vector<Matrix<u8>>& updateShares, int iter, Channel& prevChl, Channel& nextChl
             std::thread gatherClientThrd(gatherThread, 0, pIdx, (pIdx + 1) % numP, pIdx, std::ref(clientVertexData), std::ref(clientUpdateShare), iter, clientComms[(pIdx + 1) % numP].mPrev, clientComms[(pIdx + 1) % numP].mNext); 
             std::thread gatherServerThrd(gatherThread, 1, (pIdx - 1 + numP) % numP, pIdx, (pIdx - 1 + numP) % numP, std::ref(serverVertexDatas[(pIdx - 1 + numP) % numP]), std::ref(serverUpdateShare), iter, serverComms[(pIdx - 1 + numP) % numP].mPrev, serverComms[(pIdx - 1 + numP) % numP].mNext);  
@@ -2149,7 +2153,7 @@ void Sh3_Graph_CoGNN_test()
         }
     
         serverComms[(pIdx - 1 + numP) % numP].mPrev.asyncSendCopy(serverVertexDatas[(pIdx - 1 + numP) % numP].data(), serverVertexDatas[(pIdx - 1 + numP) % numP].size());
-        Matrix<u8> serverVertexData(numVertexList[pIdx], 1);
+        i64Matrix serverVertexData(numVertexList[pIdx], 1);
         serverVertexData.setZero();
         clientComms[(pIdx + 1) % numP].mNext.recv(serverVertexData.data(), serverVertexData.size());
         for (u64 i = 0; i < clientVertexData.size(); ++i) clientVertexData(i) ^= serverVertexData(i); 

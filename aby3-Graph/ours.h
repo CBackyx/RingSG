@@ -4,12 +4,6 @@
 #include "OGA.h"
 #include "OEP.h"
 
-enum Alg {
-    CC,
-    SP,
-    PR
-};
-
 void our_scatter(
     oc::Channel& prevChl,
     oc::Channel& nextChl,

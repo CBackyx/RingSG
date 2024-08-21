@@ -9,6 +9,12 @@
 
 #include <cryptoTools/Circuit/BetaLibrary.h>
 
+enum Alg {
+    CC,
+    SP,
+    PR
+};
+
 void get_multiplex_Circ(
     oc::BetaCircuit& cd,
     aby3::u64 elementSize
