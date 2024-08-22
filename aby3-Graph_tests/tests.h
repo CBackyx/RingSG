@@ -11,3 +11,4 @@ void Sh3_Graph_GraphSC_test();
 void Sh3_Graph_CoGNN_test();
 
 void Sh3_Graph_Ours_single_party(unsigned long long pIndex);
+void Sh3_Graph_CoGNN_single_party(unsigned long long pIndex);

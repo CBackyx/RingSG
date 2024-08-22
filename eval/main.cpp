@@ -6,6 +6,7 @@
 
 int main(int argc, char** argv)
 {
-	eval_ours(std::atoi(argv[1]));
+	// eval_ours(std::atoi(argv[1]));
+	eval_cognn(std::atoi(argv[1]));
 	return 0;
 }
