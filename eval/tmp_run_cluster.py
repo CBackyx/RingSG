@@ -505,11 +505,18 @@ def eval_efficiency():
     isCluster = True
     set_root_paths("efficiency")
 
-    list_schemes = [0] # 0 for Ours
+    # list_schemes = [0, 1, 2] # 0 for Ours
+    # list_net_conds = [(4000, 1), (200, 10)]
+    # list_num_parts = [5]
+    # list_scales = [10, 15, 17] # 2 ^ n
+    # list_algs = [0, 1, 2] # 0 for CC
+    # iterations = 5
+
+    list_schemes = [1] # 0 for Ours
     list_net_conds = [(4000, 1), (200, 10)]
     list_num_parts = [5]
     list_scales = [10] # 2 ^ n
-    list_algs = [0] # 0 for CC
+    list_algs = [2] # 0 for CC
     iterations = 5
 
     for cur_scheme in list_schemes:

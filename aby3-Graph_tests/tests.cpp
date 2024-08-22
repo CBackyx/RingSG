@@ -1316,9 +1316,9 @@ void Sh3_Graph_Ours_single_party(
 	Alg alg;
 	if (algId == 0) {
 		alg = Alg::CC;
-	} else if (alg == 1) {
+	} else if (algId == 1) {
 		alg = Alg::SP;
-	} else if (alg == 2) {
+	} else if (algId == 2) {
 		alg = Alg::PR;
 	} else {
 		printf("Unexpected alg!\n");
@@ -2233,9 +2233,9 @@ void Sh3_Graph_GraphSC_single_party(
 	Alg alg;
 	if (algId == 0) {
 		alg = Alg::CC;
-	} else if (alg == 1) {
+	} else if (algId == 1) {
 		alg = Alg::SP;
-	} else if (alg == 2) {
+	} else if (algId == 2) {
 		alg = Alg::PR;
 	} else {
 		printf("Unexpected alg!\n");
@@ -2747,9 +2747,9 @@ void Sh3_Graph_CoGNN_single_party(
 	Alg alg;
 	if (algId == 0) {
 		alg = Alg::CC;
-	} else if (alg == 1) {
+	} else if (algId == 1) {
 		alg = Alg::SP;
-	} else if (alg == 2) {
+	} else if (algId == 2) {
 		alg = Alg::PR;
 	} else {
 		printf("Unexpected alg!\n");
