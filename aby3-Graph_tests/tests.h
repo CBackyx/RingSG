@@ -1,3 +1,5 @@
+#pragma once
+
 void Sh3_Graph_multiplex_test();
 void Sh3_Graph_compare_select_test();
 void Sh3_Graph_OGA_test();
@@ -10,6 +12,24 @@ void Sh3_Graph_PrefixAgg_test();
 void Sh3_Graph_GraphSC_test();
 void Sh3_Graph_CoGNN_test();
 
-void Sh3_Graph_Ours_single_party(unsigned long long pIndex);
-void Sh3_Graph_CoGNN_single_party(unsigned long long pIndex);
-void Sh3_Graph_GraphSC_single_party(unsigned long long pIndex);
+void Sh3_Graph_Ours_single_party(
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters
+);
+void Sh3_Graph_CoGNN_single_party(
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters
+);
+void Sh3_Graph_GraphSC_single_party(
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters
+);

@@ -8,7 +8,7 @@ import pandas as pd
 import shutil
 import argparse
 
-executable_root_path = "./../../bin/"
+executable_root_path = "./../"
 data_root_path = "./data/"
 ferret_ot_data_root_path = "./ot-data/"
 result_root_path = "./result/"
@@ -50,14 +50,14 @@ processList = []
 
 def setup_network(bandwidth, latency):
     # Clean first
-    curProc = subprocess.Popen(["bash", "./scripts/clean_network.sh"])
+    curProc = subprocess.Popen(["sudo", "bash", "./scripts/clean_network.sh"])
     curProc.wait()
     # Setup network
-    curProc = subprocess.Popen(["bash", "./scripts/setup_network.sh", str(bandwidth), str(latency)])
+    curProc = subprocess.Popen(["sudo", "bash", "./scripts/setup_network.sh", str(bandwidth), str(latency)])
     curProc.wait()
 
 def clean_network():
-    curProc = subprocess.Popen(["bash", "./scripts/clean_network.sh"])
+    curProc = subprocess.Popen(["sudo", "bash", "./scripts/clean_network.sh"])
     curProc.wait()
 
 nsList = ["A", "B", "C", "D", "E"]
@@ -126,7 +126,7 @@ def commMeaEnd(io, comm_file_path=""):
     # os.system("cls") if "nt" in os.name else os.system("clear")
     # print the stats
     # print(df.to_string())
-    with open(comm_root_path + comm_file_path, "w", encoding='utf-8') as ofile:
+    with open(comm_file_path, "w", encoding='utf-8') as ofile:
         ofile.write(df.to_string())
 
 def run_gcn_test(executable = "gcn-ss", dataset = "cora", numParts = 2):
@@ -487,14 +487,14 @@ def run_graph_processing(scheme, net_cond, num_parts, scale, alg, iterations):
     processList = []
     start_io = commMeaStart()
     for i in range(num_parts):
-        cmd = ["ip", "netns", "exec", nsList[i]]
+        cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
         cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(alg), str(iterations)]
         print(" ".join(cmd))
         log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
         processList.append(subprocess.Popen(cmd, stdout=log_f))
     for process in processList:
         process.wait()
-    comm_log_path = "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
     my_makedir(comm_log_path)
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
