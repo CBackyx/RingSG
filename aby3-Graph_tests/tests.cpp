@@ -2214,22 +2214,36 @@ void Sh3_Graph_GraphSC_test() {
 void Sh3_Graph_GraphSC_single_party(unsigned long long pIndex) {
 
     IOService ios;
-    std::string baseIP = "127.0.0.1";
+    // std::string baseIP = "127.0.0.1";
+    std::string baseIP = "10.0.0.";
     uint32_t basePort = 1712;
     std::vector<Session> sessions;
     if (pIndex == 0) {
-        sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Client, "02")); // 02
-        sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Server, "01")); // 01
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(2 + 1), basePort + 2, SessionMode::Client, "02")); // 02
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(0 + 1), basePort + 0, SessionMode::Server, "01")); // 01
     } else if (pIndex == 1) {
-        sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Client, "01")); // 10
-        sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Server, "12")); // 12
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(0 + 1), basePort + 0, SessionMode::Client, "01")); // 10
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(1 + 1), basePort + 1, SessionMode::Server, "12")); // 12
     } else if (pIndex == 2) {
-        sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Client, "12")); // 21
-        sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Server, "02")); // 20
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(1 + 1), basePort + 1, SessionMode::Client, "12")); // 21
+        sessions.emplace_back(Session(ios, baseIP + std::to_string(2 + 1), basePort + 2, SessionMode::Server, "02")); // 20
     } else {
         printf("Illegal pIndex for GraphSC!\n");
         exit(-1);
     }
+    // if (pIndex == 0) {
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Client, "02")); // 02
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Server, "01")); // 01
+    // } else if (pIndex == 1) {
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Client, "01")); // 10
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Server, "12")); // 12
+    // } else if (pIndex == 2) {
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Client, "12")); // 21
+    //     sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Server, "02")); // 20
+    // } else {
+    //     printf("Illegal pIndex for GraphSC!\n");
+    //     exit(-1);
+    // }
 
     Channel chl_front = sessions[0].addChannel("c");
     Channel chl_latter = sessions[1].addChannel("c");
