@@ -2211,6 +2211,113 @@ void Sh3_Graph_GraphSC_test() {
         throw std::runtime_error(LOCATION);
 }
 
+void Sh3_Graph_GraphSC_single_party(unsigned long long pIndex) {
+
+    IOService ios;
+    std::string baseIP = "127.0.0.1";
+    uint32_t basePort = 1712;
+    std::vector<Session> sessions;
+    if (pIndex == 0) {
+        sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Client, "02")); // 02
+        sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Server, "01")); // 01
+    } else if (pIndex == 1) {
+        sessions.emplace_back(Session(ios, baseIP, basePort + 0, SessionMode::Client, "01")); // 10
+        sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Server, "12")); // 12
+    } else if (pIndex == 2) {
+        sessions.emplace_back(Session(ios, baseIP, basePort + 1, SessionMode::Client, "12")); // 21
+        sessions.emplace_back(Session(ios, baseIP, basePort + 2, SessionMode::Server, "02")); // 20
+    } else {
+        printf("Illegal pIndex for GraphSC!\n");
+        exit(-1);
+    }
+
+    Channel chl_front = sessions[0].addChannel("c");
+    Channel chl_latter = sessions[1].addChannel("c");
+
+
+    CommPkg comm;
+    comm = { chl_front, chl_latter };
+
+    std::atomic<bool> failed(false);
+    //bool manual = false;
+
+    GraphParam param = GraphParam {
+        num_iters: 5,
+        alg: Alg::SP
+    };
+    u64 scale = 10;
+
+    u64 numP = 5;
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
+    std::vector<u64> numVertexList(numP, numVertexPerP);
+    std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
+    std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numVertexPerP; ++j)
+            vertexIdLists[i][j] = i * numVertexPerP + j;
+    }
+    vertexDataLists[0][0] = 1;
+    std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
+    std::vector<std::vector<std::vector<std::array<u64, 2>>>> edgeLists(numP, std::vector<std::vector<std::array<u64, 2>>>(numP));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            if (i == j) {
+                numEdgeMat[i][j] = numIntraEdgePerP;
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+            } else {
+                numEdgeMat[i][j] = numInterEdgePerPair;
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+            }
+        }
+    }  
+
+    // std::string file_path = "./../test-data/small_graph.csv";
+    DataFrame df; // = load_dataframe_from_csv(file_path, false, false);
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            for (u64 k = 0; k < edgeLists[i][j].size(); ++k)
+                df.push_back({(double)edgeLists[i][j][k][0], (double)edgeLists[i][j][k][1]});
+        }
+    }
+
+    u64 bitSize = 64;
+
+    BetaLibrary lib;
+    BetaCircuit *ltCir =  lib.int_int_lt(bitSize, bitSize);
+    ltCir->levelByAndDepth();
+    BetaCircuit *orCir =  lib.int_int_bitwiseOr(bitSize, bitSize, bitSize);
+    orCir->levelByAndDepth();
+    BetaCircuit *multiplexCir =  lib.int_int_multiplex(bitSize);
+    multiplexCir->levelByAndDepth();
+    BetaCircuit *xorCir = lib.int_int_bitwiseXor(bitSize, bitSize, bitSize);
+    xorCir->levelByAndDepth();
+
+    GraphSC ana(
+        df,
+        param,
+        pIndex,
+        pIndex,
+        comm.mPrev,
+        comm.mNext
+    );
+
+    ana.run();
+    u64 sent = 0, recv = 0;
+    sent += comm.mPrev.getTotalDataSent();
+    sent += comm.mNext.getTotalDataSent();
+    recv += comm.mPrev.getTotalDataRecv();
+    recv += comm.mNext.getTotalDataRecv();
+
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << pIndex << " " << std::endl;
+    std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+        << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+    std::cout << IoStream::unlock;
+
+}
+
 void Sh3_Graph_CoGNN_test()
 {
     Alg alg = Alg::PR;
