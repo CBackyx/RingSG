@@ -2654,7 +2654,7 @@ void Sh3_Graph_CoGNN_test()
 
             if (role == 1 && iter != numIters - 1) {
                 for (int i = 0; i < numP; ++i) {
-                    if (i != ((clientPIdx + 1) % numP) && i != clientPIdx) delServerChls[i].asyncSend(vertexDataShare.data(), vertexDataShare.size());
+                    if (i != ((clientPIdx + 1) % numP) && i != clientPIdx) delServerChls[i].asyncSendCopy(vertexDataShare.data(), vertexDataShare.size());
                 }
             }
         };
@@ -3018,7 +3018,8 @@ void Sh3_Graph_CoGNN_single_party(
             vertexDataShare.setZero();
         }
         if (role == 1 && iter != 0 && serverPIdx != (clientPIdx + 1) % numP) {
-            delServerChls[(clientPIdx + 1) % numP].recv(vertexDataShare.data(), vertexDataShare.size());                
+            // delServerChls[(clientPIdx + 1) % numP].recv(vertexDataShare.data(), vertexDataShare.size());
+            recvI64Mat(vertexDataShare, vertexDataShare.size(), delServerChls[(clientPIdx + 1) % numP]);               
         }
         
         updateShare.resize(numDstVertex, 1);
@@ -3067,7 +3068,8 @@ void Sh3_Graph_CoGNN_single_party(
         );      
 
         if (!isLocal && role == 0 && (pIndex != (dstPIdx + 1) % numP)) {
-            delClientChls[(dstPIdx + 1) % numP].asyncSendCopy(updateShare.data(), updateShare.size());
+            // delClientChls[(dstPIdx + 1) % numP].asyncSendCopy(updateShare.data(), updateShare.size());
+            asyncSendI64Mat(updateShare, delClientChls[(dstPIdx + 1) % numP]);
         } 
 
         if (role == 0 && (isLocal || pIndex == (dstPIdx + 1) % numP)) {
@@ -3104,7 +3106,8 @@ void Sh3_Graph_CoGNN_single_party(
             orderedUpdateShares[dstPIdx] = updateShares[1];
             for (int i = 0; i < numP; ++i) {
                 if (i != serverPIdx && i != clientPIdx) {
-                    delClientChls[i].recv(orderedUpdateShares[i].data(), orderedUpdateShares[i].size());
+                    // delClientChls[i].recv(orderedUpdateShares[i].data(), orderedUpdateShares[i].size());
+                    recvI64Mat(orderedUpdateShares[i], orderedUpdateShares[i].size(), delClientChls[i]);
                 }
             }
         } 
@@ -3123,7 +3126,9 @@ void Sh3_Graph_CoGNN_single_party(
 
         if (role == 1 && iter != numIters - 1) {
             for (int i = 0; i < numP; ++i) {
-                if (i != ((clientPIdx + 1) % numP) && i != clientPIdx) delServerChls[i].asyncSend(vertexDataShare.data(), vertexDataShare.size());
+                if (i != ((clientPIdx + 1) % numP) && i != clientPIdx) 
+                    asyncSendI64Mat(vertexDataShare, delServerChls[i]);
+                    // delServerChls[i].asyncSendCopy(vertexDataShare.data(), vertexDataShare.size());
             }
         }
     };
@@ -3187,10 +3192,12 @@ void Sh3_Graph_CoGNN_single_party(
         // std::cout << IoStream::unlock;
     }
 
-    serverComms[(pIndex - 1 + numP) % numP].mPrev.asyncSendCopy(serverVertexDatas[(pIndex - 1 + numP) % numP].data(), serverVertexDatas[(pIndex - 1 + numP) % numP].size());
+    // serverComms[(pIndex - 1 + numP) % numP].mPrev.asyncSendCopy(serverVertexDatas[(pIndex - 1 + numP) % numP].data(), serverVertexDatas[(pIndex - 1 + numP) % numP].size());
+    asyncSendI64Mat(serverVertexDatas[(pIndex - 1 + numP) % numP], serverComms[(pIndex - 1 + numP) % numP].mPrev);
     i64Matrix serverVertexData(numVertexList[pIndex], 1);
     serverVertexData.setZero();
-    clientComms[(pIndex + 1) % numP].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    // clientComms[(pIndex + 1) % numP].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    recvI64Mat(serverVertexData, serverVertexData.size(), clientComms[(pIndex + 1) % numP].mNext);
     for (u64 i = 0; i < clientVertexData.size(); ++i) clientVertexData(i) ^= serverVertexData(i); 
 
     u64 sent = 0, recv = 0;
