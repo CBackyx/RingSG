@@ -26,6 +26,31 @@
 using namespace oc;
 using namespace aby3;
 
+#define MAX_SEND_I64MAT_SIZE 10000 
+
+void asyncSendI64Mat(const i64Matrix& mat, Channel& chl) {
+
+    uint64_t step = MAX_SEND_I64MAT_SIZE;
+    uint64_t matSize = mat.size();
+    for (uint64_t i=0;i<matSize;i+=step) {
+        uint64_t endIndex = i + step < matSize? i + step : matSize;
+        i64Matrix buf(endIndex - i, 1);
+        memcpy(buf.data(), mat.data() + i, (endIndex - i) * sizeof(u64));
+        chl.asyncSendCopy(buf.data(), buf.size());
+    }
+}
+
+void recvI64Mat(i64Matrix& mat, u64 matSize, Channel& chl) {
+
+    uint64_t step = MAX_SEND_I64MAT_SIZE;
+    for (uint64_t i=0;i<matSize;i+=step) {
+        uint64_t endIndex = i + step < matSize? i + step : matSize;
+        i64Matrix buf(endIndex - i, 1);
+        chl.recv(buf.data(), buf.size());
+        memcpy(mat.data() + i, buf.data(), (endIndex - i) * sizeof(u64));
+    }
+}
+
 void Sh3_Graph_eq_test()
 {
 
@@ -1549,7 +1574,8 @@ void Sh3_Graph_Ours_single_party(
                             printf("Unexpected Unconnected Channel!\n");
                             exit(-1);
                         }
-                        delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        // delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delClientChls[(i + 1) % numP]);
                     } else {
                         // Get the server share for P_{pIdx-1}
                         updateShare2 = updateShares[i];
@@ -1565,7 +1591,8 @@ void Sh3_Graph_Ours_single_party(
                             printf("Unexpected Unconnected Channel!\n");
                             exit(-1);
                         }
-                        delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        // delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delServerChls[i]);
                     } else {
                         // Get the client share for P_{pIdx}
                         updateShare2 = updateShares[i];
@@ -1603,7 +1630,8 @@ void Sh3_Graph_Ours_single_party(
             for (int i = 0; i < numP; ++i) {
                 if (i != clientPIdx) {
                     if ((i + 1) % numP != pIndex) {
-                        delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
+                        // delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delServerChls[(i + 1) % numP]);
                     } else {
                         updateShares[i] = updateShare2;
                     }
@@ -1614,7 +1642,8 @@ void Sh3_Graph_Ours_single_party(
             for (int i = 0; i < numP; ++i) {
                 if (i != clientPIdx) {
                     if (i != pIndex) {
-                        delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        // delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delClientChls[i]);
                     } else {
                         updateShares[i] = updateShare2;
                     }
@@ -1670,10 +1699,12 @@ void Sh3_Graph_Ours_single_party(
             thrd.join();            
     }
 
-    computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
+    // computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
+    asyncSendI64Mat(vertexDatas[1], computeComms[1].mPrev);
     i64Matrix serverVertexData(numVertexList[pIndex], 1);
     serverVertexData.setZero();
-    computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    // computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    recvI64Mat(serverVertexData, serverVertexData.size(), computeComms[0].mNext);
     for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
 
     u64 sent = 0, recv = 0;
