@@ -562,11 +562,11 @@ def eval_efficiency():
     # list_algs = [0, 1, 2] # 0 for CC
     # iterations = 5
 
-    list_schemes = [0] # 0 for Ours
-    list_net_conds = [(4000, 1)]
+    list_schemes = [1] # 0 for Ours
+    list_net_conds = [(200, 10)]
     list_num_parts = [5]
-    list_scales = [23] # 2 ^ n
-    list_algs = [0] # 0 for CC
+    list_scales = [18, 20] # 2 ^ n
+    list_algs = [2] # 0 for CC
     iterations = 5
 
     # list_schemes = [0] # 0 for Ours

@@ -54,7 +54,7 @@ void cognn_scatter(
             inputScaler,
             Matrix<u8>(),
             inputShare_preScatter,
-            multCir_64,
+            addCir_64,
             false,
             false        
         );     
