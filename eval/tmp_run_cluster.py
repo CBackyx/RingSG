@@ -60,7 +60,7 @@ def clean_network():
     curProc = subprocess.Popen(["sudo", "bash", "./scripts/clean_network.sh"])
     curProc.wait()
 
-nsList = ["A", "B", "C", "D", "E"]
+nsList = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
 def get_size(bytes):
     """
@@ -514,7 +514,7 @@ def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, 
     for i in range(num_parts):
         cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
         cmd += ["taskset", "--cpu-list"]
-        cmd += [str(i * 4) + "-" + str((i + 1) * 4 - 1)]
+        cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
         cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(alg), str(iterations)]
         print(" ".join(cmd))
         log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
@@ -564,9 +564,9 @@ def eval_efficiency():
 
     list_schemes = [0, 1, 2] # 0 for Ours
     list_net_conds = [(4000, 1), (200, 10)]
-    list_num_parts = [5]
-    list_scales = [10, 12, 15, 16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
+    list_num_parts = [8]
+    list_scales = [12] # 2 ^ n
+    list_algs = [0] # 0 for CC
     iterations = 5
 
     # list_schemes = [0] # 0 for Ours

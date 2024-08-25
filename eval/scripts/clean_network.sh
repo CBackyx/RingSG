@@ -1,9 +1,9 @@
-for host in {A..E} ; do 
+for host in {A..J} ; do 
     ip netns exec ${host} tc qdisc del dev veth${host} root
 done
 
 # Remove veth pairs and network namespaces
-for host in {A..E} ; do
+for host in {A..J} ; do
     ip link del dev veth${host}.peer
     ip netns del ${host}
 done
