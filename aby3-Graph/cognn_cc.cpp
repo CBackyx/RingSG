@@ -36,7 +36,8 @@ void cognn_scatter(
     i64Matrix srcVertexShare_int(edgeSrcTag.size(), inputShare.cols());
 
     BetaLibrary lib;
-    auto multCir_64 = lib.int_int_mult(64, 64, 64);
+    auto multCir_64 = lib.uint_uint_mult(64, 64, 64);
+    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
     auto addCir_64 = lib.int_int_add(64, 64, 64);
 
     i64Matrix inputShare_preScatter(inputShare.rows(), inputShare.cols());
@@ -54,7 +55,7 @@ void cognn_scatter(
             inputScaler,
             Matrix<u8>(),
             inputShare_preScatter,
-            addCir_64,
+            multCir_64,
             false,
             false        
         );     

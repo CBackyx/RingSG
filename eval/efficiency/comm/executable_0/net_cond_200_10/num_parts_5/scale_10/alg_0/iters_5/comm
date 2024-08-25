@@ -1,11 +1,11 @@
          iface Download  Upload
-9   vethB.peer   4.67MB  4.67MB
-10  vethC.peer   4.67MB  4.67MB
-11  vethD.peer   4.67MB  4.67MB
-12  vethE.peer   4.67MB  4.67MB
 8   vethA.peer   4.66MB  4.67MB
+9   vethB.peer   4.66MB  4.67MB
+10  vethC.peer   4.66MB  4.67MB
+11  vethD.peer   4.66MB  4.67MB
+12  vethE.peer   4.66MB  4.66MB
 0           lo   0.01MB  0.01MB
-1         eno1   0.00MB  0.00MB
+1         eno1   0.00MB  0.01MB
 2         eno2   0.00MB  0.00MB
 3   ens10f0np0   0.00MB  0.00MB
 4         usb0   0.00MB  0.00MB

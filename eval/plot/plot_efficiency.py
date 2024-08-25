@@ -1,0 +1,77 @@
+import os
+import re
+import matplotlib.pyplot as plt
+
+# Define the base directory for the log files
+base_dir = './../efficiency/log'
+
+# Initialize data structures to store the extracted information
+data = {}
+
+list_schemes = [0, 1, 2] # 0 for Ours
+list_scheme_names = ["ours", "CoGNN", "GraphSC"]
+list_net_conds = [(4000, 1), (200, 10)]
+list_num_parts = [5]
+list_scales = [10, 12, 15, 16] # 2 ^ n
+list_algs = [0, 1, 2] # 0 for CC
+list_alg_names = ["CC", "SP", "PR"]
+iterations = 5
+
+# Traverse the log files
+for executable in list_schemes:
+    net_cond = list_net_conds[0]
+    num_parts = list_num_parts[0]
+    for scale in list_scales:
+        for alg in list_algs:            
+            # Initialize data structure for this algorithm if not already done
+            if alg not in data:
+                data[alg] = {}
+            if executable not in data[alg]:
+                data[alg][executable] = {'scale': [], 'duration': [], 'communication': []}
+            
+            # Read the log file
+            with open(os.path.join(base_dir, "executable_" + str(executable), "net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]), "num_parts_" + str(num_parts), "scale_" + str(scale), "alg_" + str(alg), "iters_" + str(iterations), "efficiency_0.log"), 'r') as f:
+                lines = f.readlines()
+                duration = 0.0
+                communication = 0.0
+                for line in lines:
+                    line = line.strip('\n')
+                    if list_scheme_names[executable] + ' took ' in line:
+                        segs = line.split(" ")
+                        segs = [seg for seg in segs if seg != ""]
+                        duration = float(segs[2])
+                    else:
+                        communication_match = re.search(r'total: ([\d.]+)MB', line)
+                        if communication_match:
+                            communication = float(communication_match.group(1))                        
+                
+                # Store the extracted data
+                data[alg][executable]['scale'].append(scale)
+                data[alg][executable]['duration'].append(duration)
+                data[alg][executable]['communication'].append(communication)
+
+print(data)
+# exit(-1)
+
+# Plot the results
+fig, axes = plt.subplots(3, 2, figsize=(12, 18))
+
+for alg in data:
+    row = alg - 1
+    for executable in data[alg]:
+        axes[row, 0].plot(data[alg][executable]['scale'], data[alg][executable]['duration'], label=f'Executable {list_scheme_names[executable]}')
+        axes[row, 1].plot(data[alg][executable]['scale'], data[alg][executable]['communication'], label=f'Executable {list_scheme_names[executable]}')
+    
+    axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration')
+    axes[row, 0].set_xlabel('Scale')
+    axes[row, 0].set_ylabel('Duration (seconds)')
+    axes[row, 0].legend()
+    
+    axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication')
+    axes[row, 1].set_xlabel('Scale')
+    axes[row, 1].set_ylabel('Total Communication (MB)')
+    axes[row, 1].legend()
+
+plt.tight_layout()
+plt.savefig("fig/efficiency_scale.pdf")
+plt.show()

@@ -19,7 +19,7 @@ void our_scatter(
     Alg alg
 ) {
     BetaLibrary lib;
-    auto multCir_64 = lib.int_int_mult(64, 64, 64);
+    auto multCir_64 = lib.uint_uint_mult(64, 64, 64);
     auto addCir_64 = lib.int_int_add(64, 64, 64);
 
     u64 byteSize = inputShare.cols() * 8;
@@ -38,7 +38,7 @@ void our_scatter(
             inputScaler,
             Matrix<u8>(),
             inputShare_preScatter,
-            addCir_64,
+            multCir_64,
             false,
             false        
         );     
