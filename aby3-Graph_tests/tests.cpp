@@ -655,9 +655,9 @@ void Sh3_Graph_OGA_test()
 
 void Sh3_Graph_CC_test()
 {
-    u64 numP = 5;
-    std::vector<u64> pIndices(5, 0);
-    for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
+    u64 numP = 7;
+    // std::vector<u64> pIndices(5, 0);
+    // for (u64 i = 0; i < numP; ++i) pIndices[i] = i;
 
     IOService ios;
     std::vector<std::vector<Session>> computeSessions(numP);
@@ -800,16 +800,16 @@ void Sh3_Graph_CC_test()
                     }
                 }
             }
-            scatter(
-                computeComms[role].mPrev,
-                computeComms[role].mNext,
-                pIdx,
-                role,
-                srcTag, 
-                dstTag, 
-                vertexDataShare,
-                updateShare
-            );      
+            // scatter(
+            //     computeComms[role].mPrev,
+            //     computeComms[role].mNext,
+            //     pIdx,
+            //     role,
+            //     srcTag, 
+            //     dstTag, 
+            //     vertexDataShare,
+            //     updateShare
+            // );      
 
             // Decompose update Share and send    
             std::vector<Matrix<u8>> updateShares(numP);
@@ -919,17 +919,17 @@ void Sh3_Graph_CC_test()
                 }
             } 
 
-            gather(
-                computeComms[role].mPrev,
-                computeComms[role].mNext,
-                pIdx,
-                role,
-                dstTag, 
-                vertexTag,
-                updateShare,
-                vertexDataShare,
-                updatedVertexDataShare
-            );        
+            // gather(
+            //     computeComms[role].mPrev,
+            //     computeComms[role].mNext,
+            //     pIdx,
+            //     role,
+            //     dstTag, 
+            //     vertexTag,
+            //     updateShare,
+            //     vertexDataShare,
+            //     updatedVertexDataShare
+            // );        
             vertexDataShare = updatedVertexDataShare;
         };
 
@@ -1570,10 +1570,11 @@ void Sh3_Graph_Ours_single_party(
             for (int i = 0; i < numP; ++i) {
                 if (i != clientPIdx) {
                     if ((i + 1) % numP != pIndex) {
-                        if (!delClientChls[(i + 1) % numP].isConnected()) {
-                            printf("Unexpected Unconnected Channel! delClientChls %d %d %d\n", (i + 1) % numP, pIndex, role);
-                            exit(-1);
-                        }
+                        // printf("send delClient %d -> %d\n", pIndex, (i + 1) % numP);
+                        // if (!delClientChls[(i + 1) % numP].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delClientChls %d %d %d\n", (i + 1) % numP, pIndex, role);
+                        //     exit(-1);
+                        // }
                         // delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
                         asyncSendI64Mat(updateShares[i], delClientChls[(i + 1) % numP]);
                     } else {
@@ -1587,10 +1588,11 @@ void Sh3_Graph_Ours_single_party(
             for (int i = 0; i < numP; ++i) {
                 if (i != clientPIdx) {
                     if (i != pIndex) {
-                        if (!delServerChls[i].isConnected()) {
-                            printf("Unexpected Unconnected Channel! delServerChls %d %d %d\n", i, pIndex, role);
-                            exit(-1);
-                        }
+                        // printf("send delServer %d -> %d\n", pIndex, i);
+                        // if (!delServerChls[i].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delServerChls %d %d %d\n", i, pIndex, role);
+                        //     exit(-1);
+                        // }
                         // delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
                         asyncSendI64Mat(updateShares[i], delServerChls[i]);
                     } else {
@@ -1630,6 +1632,7 @@ void Sh3_Graph_Ours_single_party(
             for (int i = 0; i < numP; ++i) {
                 if (i != clientPIdx) {
                     if ((i + 1) % numP != pIndex) {
+                        // printf("recv delServer %d -> %d\n", (i + 1) % numP, pIndex);
                         // delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
                         recvI64Mat(updateShares[i], updateShares[i].size(), delServerChls[(i + 1) % numP]);
                     } else {
@@ -1643,6 +1646,7 @@ void Sh3_Graph_Ours_single_party(
                 if (i != clientPIdx) {
                     if (i != pIndex) {
                         // delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        // printf("recv delClient %d -> %d\n", i, pIndex);
                         recvI64Mat(updateShares[i], updateShares[i].size(), delClientChls[i]);
                     } else {
                         updateShares[i] = updateShare2;
@@ -1728,6 +1732,23 @@ void Sh3_Graph_Ours_single_party(
     std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
         << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
     std::cout << IoStream::unlock;
+
+    // for (u64 j = 0; j < 6; ++j) {
+    //     if (j != pIndex) {
+    //         computeChls[j].close();
+    //         computeSessions[j].stop();
+    //     }
+    // }
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (j != pIndex) {
+    //         delegateClientChls[j].close();
+    //         delegateClientSessions[j].stop();
+    //     }
+    //     if (j != pIndex) {
+    //         delegateServerChls[j].close();
+    //         delegateServerSessions[j].stop();
+    //     }
+    // }
 
 
     // if (failed)
