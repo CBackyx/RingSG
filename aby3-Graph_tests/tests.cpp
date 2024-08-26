@@ -1571,7 +1571,7 @@ void Sh3_Graph_Ours_single_party(
                 if (i != clientPIdx) {
                     if ((i + 1) % numP != pIndex) {
                         if (!delClientChls[(i + 1) % numP].isConnected()) {
-                            printf("Unexpected Unconnected Channel!\n");
+                            printf("Unexpected Unconnected Channel! delClientChls %d %d %d\n", (i + 1) % numP, pIndex, role);
                             exit(-1);
                         }
                         // delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
@@ -1588,7 +1588,7 @@ void Sh3_Graph_Ours_single_party(
                 if (i != clientPIdx) {
                     if (i != pIndex) {
                         if (!delServerChls[i].isConnected()) {
-                            printf("Unexpected Unconnected Channel!\n");
+                            printf("Unexpected Unconnected Channel! delServerChls %d %d %d\n", i, pIndex, role);
                             exit(-1);
                         }
                         // delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());

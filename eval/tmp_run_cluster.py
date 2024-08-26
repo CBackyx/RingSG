@@ -526,6 +526,33 @@ def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, 
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
 
+def run_graph_processing_debug(scheme, net_cond, num_parts, scale, alg, iterations):
+    cur_bandwidth = net_cond[0]
+    cur_latency = net_cond[1]
+    if isCluster:
+        setup_network(cur_bandwidth, cur_latency)
+
+    log_path = log_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(log_path)
+
+    executable_path = executable_root_path + "./out/build/linux/eval/eval"
+    processList = []
+    start_io = commMeaStart()
+    for i in range(num_parts):
+        # if i == 0:
+        #     continue
+        cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
+        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(alg), str(iterations)]
+        print(" ".join(cmd))
+        log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
+        processList.append(subprocess.Popen(cmd, stdout=log_f))
+    for process in processList:
+        process.wait()
+    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(comm_log_path)
+    commMeaEnd(start_io, comm_log_path + "comm")
+    processList = []
+
 def eval_efficiency():
     global iterations
     global isCluster
@@ -562,10 +589,10 @@ def eval_efficiency():
     # list_algs = [0, 1, 2] # 0 for CC
     # iterations = 5
 
-    list_schemes = [0, 1, 2] # 0 for Ours
-    list_net_conds = [(4000, 1), (200, 10)]
-    list_num_parts = [8]
-    list_scales = [12] # 2 ^ n
+    list_schemes = [0] # 0 for Ours
+    list_net_conds = [(4000, 1)]
+    list_num_parts = [7]
+    list_scales = [10] # 2 ^ n
     list_algs = [0] # 0 for CC
     iterations = 5
 
@@ -581,7 +608,7 @@ def eval_efficiency():
             for cur_num_parts  in list_num_parts:
                 for cur_scale in list_scales:
                     for cur_alg in list_algs:
-                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+                        run_graph_processing_debug(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
 
 
 # Define the main function to parse command line arguments and call the appropriate functions

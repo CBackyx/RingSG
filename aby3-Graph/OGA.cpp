@@ -17,18 +17,21 @@ void print_vector(const std::vector<T>& v, u64 num = 0) {
 }
 
 void getOGAMergeSequences(
-    u64 size,
+    i64 size,
     std::vector<std::array<std::vector<u64>, 2>>& seqs
 ) {
     seqs.clear();
-    u64 curSize = size;
-    u64 step = 1;
+    i64 curSize = size;
+    i64 step = 1;
+    // printf("size %d\n", size);
     while (curSize > 1) {
         std::array<std::vector<u64>, 2> curSeq;
-        for (u64 i = 0; i < size - step; i += 2 * step) {
+        for (i64 i = 0; i < size - step; i += 2 * step) {
             curSeq[0].push_back(i);
             curSeq[1].push_back(i + step);
+            // printf("curseq %d %d\n", i, i + step);
         }
+        // printf("curseq %d %d\n", i, i + step);
         seqs.push_back(curSeq);
         step *= 2;
         curSize /= 2;
@@ -296,7 +299,7 @@ void sbMatrixExtractFill(
         exit(-1);
     }
     if (srcIdx.size() != dstIdx.size()) {
-        printf("Unequal sizes of srcIdx and dstIdx during sbMatrixExtractFill!\n");
+        printf("Unequal sizes of srcIdx and dstIdx during sbMatrixExtractFill! %d %d %d %d\n", srcIdx.size(), dstIdx.size(), src.rows(), dst.rows());
         exit(-1);        
     }
     for (u64 i = 0; i < dstIdx.size(); ++i) {
@@ -407,8 +410,11 @@ void run_OGA(
         sbMatrix curA(curWidth, bitSize);
         sbMatrix curB(curWidth, bitSize);
         sbMatrix curD(curWidth, bitSize);
-        sbMatrixExtractFill(relaSeqs[r][0], curRange, sInput, curA);
-        sbMatrixExtractFill(relaSeqs[r][1], curRange, sInput, curB);
+        // printf(">>%d %d %d %d\n", relaSeqs[r][0].size(), curRange.size(), sInput.rows(), curA.rows());
+        // sbMatrixExtractFill(relaSeqs[r][0], curRange, sInput, curA);
+        // sbMatrixExtractFill(relaSeqs[r][1], curRange, sInput, curB);
+        sbMatrixExtractFill(seqs[r][0], curRange, sInput, curA);
+        sbMatrixExtractFill(seqs[r][1], curRange, sInput, curB);
         evalConditionalMerge(
             curA,
             curB,
@@ -422,11 +428,12 @@ void run_OGA(
             gen,
             rt
         );
-        sInput = curD;
-        sbMatrixExtractFill(curRange, seqs[r][1], curB, sOutput);
+        // sInput = curD;
+        sbMatrixExtractFill(curRange, seqs[r][1], curB, sInput);
     }
-    sOutput.mShares[0](0) = sInput.mShares[0](0);
-    sOutput.mShares[1](0) = sInput.mShares[1](0);
+    // sOutput.mShares[0](0) = sInput.mShares[0](0);
+    // sOutput.mShares[1](0) = sInput.mShares[1](0);
+    sOutput = sInput;
 
     if (isRevealAll)
         task = enc.revealAll(task, sOutput, output);
