@@ -14,8 +14,8 @@ list_schemes = [0, 1, 2] # 0 for Ours
 list_scheme_names = ["ours", "CoGNN", "GraphSC"]
 list_scheme_formal_names = ["Ours", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
-list_num_parts = [5]
-list_scales = [10, 12, 15, 16] # 2 ^ n
+list_num_parts = [4, 5, 6, 7, 8]
+list_scales = [16] # 2 ^ n
 list_scale_names = ["$2^{10}$", "$2^{12}$", "$2^{15}$", "$2^{16}$"]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
@@ -25,16 +25,14 @@ colors = ["paleturquoise", "wheat", "pink"]
 # Traverse the log files
 for executable in list_schemes:
     net_cond = list_net_conds[0]
-    num_parts = list_num_parts[0]
-    for scale_index in range(len(list_scales)):
-        scale = list_scales[scale_index]
-        scale_name = list_scale_names[scale_index]
+    scale = list_scales[0]
+    for num_parts in list_num_parts:
         for alg in list_algs:            
             # Initialize data structure for this algorithm if not already done
             if alg not in data:
                 data[alg] = {}
             if executable not in data[alg]:
-                data[alg][executable] = {'scale': [], 'duration': [], 'communication': []}
+                data[alg][executable] = {'num_parts': [], 'duration': [], 'communication': []}
             
             # Read the log file
             with open(os.path.join(base_dir, "executable_" + str(executable), "net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]), "num_parts_" + str(num_parts), "scale_" + str(scale), "alg_" + str(alg), "iters_" + str(iterations), "efficiency_0.log"), 'r') as f:
@@ -53,7 +51,7 @@ for executable in list_schemes:
                             communication = float(communication_match.group(1))                        
                 
                 # Store the extracted data
-                data[alg][executable]['scale'].append(scale)
+                data[alg][executable]['num_parts'].append(num_parts)
                 data[alg][executable]['duration'].append(duration)
                 data[alg][executable]['communication'].append(communication)
 
@@ -66,25 +64,23 @@ fig, axes = plt.subplots(3, 2, figsize=(6, 6))
 for alg in list_algs:
     row = alg
     for executable in data[alg]:
-        axes[row, 0].plot(data[alg][executable]['scale'], data[alg][executable]['duration'], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
-        axes[row, 1].plot(data[alg][executable]['scale'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+        axes[row, 0].plot(data[alg][executable]['num_parts'], data[alg][executable]['duration'], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+        axes[row, 1].plot(data[alg][executable]['num_parts'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
     print("Duration CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['duration'], data[alg][0]['duration'])])
     print("Duration GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['duration'], data[alg][0]['duration'])])
     print("Comm CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['communication'], data[alg][0]['communication'])])
     print("Comm GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['communication'], data[alg][0]['communication'])])
     
     axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration')
-    axes[row, 0].set_xlabel('Scale')
-    axes[row, 0].set_xticks(list_scales, list_scale_names)
+    axes[row, 0].set_xlabel('Number of Parties')
     axes[row, 0].set_ylabel('Running Time (seconds)')
     axes[row, 0].legend()
     
     axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication')
-    axes[row, 1].set_xlabel('Scale')
-    axes[row, 1].set_xticks(list_scales, list_scale_names)
+    axes[row, 1].set_xlabel('Number of Parties')
     axes[row, 1].set_ylabel('Per-party Comm (GB)')
     axes[row, 1].legend()
 
 plt.tight_layout()
-plt.savefig("fig/efficiency_scale.pdf")
+plt.savefig("fig/efficiency_num_party.pdf")
 plt.show()
