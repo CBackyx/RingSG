@@ -5,17 +5,21 @@ import matplotlib.pyplot as plt
 # Define the base directory for the log files
 base_dir = './../efficiency/log'
 
+markerList = ['^', 'o', 'x', '*']
+
 # Initialize data structures to store the extracted information
 data = {}
 
 list_schemes = [0, 1, 2] # 0 for Ours
 list_scheme_names = ["ours", "CoGNN", "GraphSC"]
+list_scheme_formal_names = ["Ours", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [5]
 list_scales = [10, 12, 15, 16] # 2 ^ n
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5
+colors = ["skyblue", "teal", "salmon"]
 
 # Traverse the log files
 for executable in list_schemes:
@@ -54,22 +58,26 @@ print(data)
 # exit(-1)
 
 # Plot the results
-fig, axes = plt.subplots(3, 2, figsize=(12, 18))
+fig, axes = plt.subplots(3, 2, figsize=(6, 6))
 
-for alg in data:
-    row = alg - 1
+for alg in list_algs:
+    row = alg
     for executable in data[alg]:
-        axes[row, 0].plot(data[alg][executable]['scale'], data[alg][executable]['duration'], label=f'Executable {list_scheme_names[executable]}')
-        axes[row, 1].plot(data[alg][executable]['scale'], data[alg][executable]['communication'], label=f'Executable {list_scheme_names[executable]}')
+        axes[row, 0].plot(data[alg][executable]['scale'], data[alg][executable]['duration'], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+        axes[row, 1].plot(data[alg][executable]['scale'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+    print("Duration CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['duration'], data[alg][0]['duration'])])
+    print("Duration GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['duration'], data[alg][0]['duration'])])
+    print("Comm CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['communication'], data[alg][0]['communication'])])
+    print("Comm GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['communication'], data[alg][0]['communication'])])
     
     axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration')
     axes[row, 0].set_xlabel('Scale')
-    axes[row, 0].set_ylabel('Duration (seconds)')
+    axes[row, 0].set_ylabel('Running Time (seconds)')
     axes[row, 0].legend()
     
     axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication')
     axes[row, 1].set_xlabel('Scale')
-    axes[row, 1].set_ylabel('Total Communication (MB)')
+    axes[row, 1].set_ylabel('Per-party Comm (GB)')
     axes[row, 1].legend()
 
 plt.tight_layout()
