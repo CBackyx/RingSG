@@ -28,6 +28,17 @@ using namespace aby3;
 
 #define MAX_SEND_I64MAT_SIZE 10000 
 
+std::mutex print_duration_mutex;
+
+void print_duration(std::chrono::_V2::system_clock::time_point t1, std::string tag) {
+    print_duration_mutex.lock();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::cout << "::" << tag << " took "
+              << ((double)std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()) / 1000
+              << " seconds\n";
+    print_duration_mutex.unlock();
+}
+
 void asyncSendI64Mat(const i64Matrix& mat, Channel& chl) {
 
     uint64_t step = MAX_SEND_I64MAT_SIZE;
@@ -1688,19 +1699,27 @@ void Sh3_Graph_Ours_single_party(
     };
 
     for (u64 iter = 0; iter < numIters; ++iter) {
+        auto t_tmp = std::chrono::high_resolution_clock::now();
+        
         std::vector<std::thread> scatterThrds; 
         for (u64 role = 0; role < 3; ++role) {
             scatterThrds.emplace_back(scatterThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
         }
         for (auto& thrd : scatterThrds)
             thrd.join();
+
+        print_duration(t_tmp, "Scatter");
+        t_tmp = std::chrono::high_resolution_clock::now();
+
         std::vector<std::thread> gatherThrds;
         for (u64 role = 0; role < 3; ++role) {
             if (role != 2) gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[1 - role]));
             else gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
         }
         for (auto& thrd : gatherThrds)
-            thrd.join();            
+            thrd.join();
+
+        print_duration(t_tmp, "Gather");            
     }
 
     // computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
@@ -3155,6 +3174,7 @@ void Sh3_Graph_CoGNN_single_party(
     };
 
     for (u64 iter = 0; iter < numIters; ++iter) {
+        auto t_tmp = std::chrono::high_resolution_clock::now();
         std::vector<std::thread> scatterClientThrds; 
         std::vector<std::thread> scatterServerThrds;
         std::vector<std::thread> scatterHelperThrds;
@@ -3192,6 +3212,9 @@ void Sh3_Graph_CoGNN_single_party(
             scatterHelperThrds[i].join();
         }
 
+        print_duration(t_tmp, "Scatter");
+        t_tmp = std::chrono::high_resolution_clock::now();
+
         std::vector<i64Matrix> clientUpdateShare = serverInterUpdateShare;
         clientUpdateShare[pIndex] = clientInterUpdateShare[pIndex];
         std::vector<i64Matrix> serverUpdateShare(2);
@@ -3207,6 +3230,8 @@ void Sh3_Graph_CoGNN_single_party(
         gatherServerThrd.join();
         gatherHelperThrd.join();
         serverVertexDatas[pIndex] = serverVertexDatas[(pIndex - 1 + numP) % numP];
+
+        print_duration(t_tmp, "Gather");
 
         // std::cout << IoStream::lock;
         // std::cout << "pIdx::" << pIdx << " iter = " << iter << std::endl;

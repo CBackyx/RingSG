@@ -557,6 +557,7 @@ def eval_efficiency():
     global iterations
     global isCluster
     isCluster = True
+    # set_root_paths("remove-oga")
     set_root_paths("efficiency")
 
     # list_schemes = [0] # 0 for Ours
@@ -589,9 +590,16 @@ def eval_efficiency():
     # list_algs = [0, 1, 2] # 0 for CC
     # iterations = 5
 
-    list_schemes = [0, 1, 2] # 0 for Ours
-    list_net_conds = [(4000, 1), (200, 10)]
-    list_num_parts = [4, 5, 6, 7, 8]
+    # list_schemes = [0, 1] # 0 for Ours
+    # list_net_conds = [(4000, 1), (200, 10)]
+    # list_num_parts = [6]
+    # list_scales = [16] # 2 ^ n
+    # list_algs = [0, 1, 2] # 0 for CC
+    # iterations = 5
+
+    list_schemes = [2] # 0 for Ours
+    list_net_conds = [(200, 10)]
+    list_num_parts = [8]
     list_scales = [10, 12, 15, 16] # 2 ^ n
     list_algs = [0, 1, 2] # 0 for CC
     iterations = 5

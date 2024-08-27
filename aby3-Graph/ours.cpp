@@ -170,16 +170,16 @@ void our_gather(
         exit(-1);
     }    
     // orCir->levelByAndDepth();    
-    run_OGA(
-        prevChl,
-        nextChl,
-        role,
-        sortedUpdateTag, 
-        unaggedUpdateShare_int,
-        aggedUpdateShare_int,
-        mergeCir,
-        false
-    );
+    // run_OGA(
+    //     prevChl,
+    //     nextChl,
+    //     role,
+    //     sortedUpdateTag, 
+    //     unaggedUpdateShare_int,
+    //     aggedUpdateShare_int,
+    //     mergeCir,
+    //     false
+    // );
     Matrix<u8> aggedUpdateShare(updateShare.rows(), byteSize);
     intMat2ByteMat(
         aggedUpdateShare_int,

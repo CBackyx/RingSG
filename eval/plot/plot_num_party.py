@@ -20,7 +20,7 @@ list_scale_names = ["$2^{10}$", "$2^{12}$", "$2^{15}$", "$2^{16}$"]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5
-colors = ["paleturquoise", "wheat", "pink"]
+colors = ["#4B5F66", "#E39A56", "#BA5B59"]
 
 # Traverse the log files
 for executable in list_schemes:
@@ -64,8 +64,8 @@ fig, axes = plt.subplots(3, 2, figsize=(6, 6))
 for alg in list_algs:
     row = alg
     for executable in data[alg]:
-        axes[row, 0].plot(data[alg][executable]['num_parts'], data[alg][executable]['duration'], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
-        axes[row, 1].plot(data[alg][executable]['num_parts'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=3, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+        axes[row, 0].plot(data[alg][executable]['num_parts'], data[alg][executable]['duration'], markerList[executable], linewidth=1, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
+        axes[row, 1].plot(data[alg][executable]['num_parts'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=1, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
     print("Duration CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['duration'], data[alg][0]['duration'])])
     print("Duration GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['duration'], data[alg][0]['duration'])])
     print("Comm CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['communication'], data[alg][0]['communication'])])

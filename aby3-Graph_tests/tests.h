@@ -1,5 +1,10 @@
 #pragma once
 
+#include <chrono>
+#include <mutex>
+
+void print_duration(std::chrono::_V2::system_clock::time_point t1, std::string tag);
+
 void Sh3_Graph_multiplex_test();
 void Sh3_Graph_compare_select_test();
 void Sh3_Graph_OGA_test();
