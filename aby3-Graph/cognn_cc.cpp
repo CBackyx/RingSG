@@ -115,7 +115,7 @@ void cognn_scatter(
     gen.init(toBlock(role), toBlock((role + 1) % 3));
 
     // Merge   
-    i64Matrix aggedSrcVertexShare_int = srcVertexShare_int;
+    // i64Matrix aggedSrcVertexShare_int = srcVertexShare_int;
     i64Matrix aggedSrcVertexShare_int = prefix_network_aggregate(
         edgeDstTag,
         srcVertexShare_int,

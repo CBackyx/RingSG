@@ -29,3 +29,14 @@ void our_gather(
     Alg alg
 );
 
+void our_extract(
+    oc::Channel& prevChl,
+    oc::Channel& nextChl,
+    int pIdx,
+    int role,
+    const std::vector<aby3::u64>& vertexTag, 
+    const aby3::i64Matrix& inputShare,
+    aby3::i64Matrix& outputShare,
+    Alg alg
+);
+

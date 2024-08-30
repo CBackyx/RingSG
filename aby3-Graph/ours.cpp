@@ -1,4 +1,5 @@
 #include "ours.h"
+#include "shuffle.h"
 #include <algorithm>
 #include <cryptoTools/Circuit/BetaLibrary.h>
 
@@ -233,12 +234,13 @@ void our_extract(
     auto addCir_64 = lib.int_int_add(64, 64, 64);
 
     u64 byteSize = inputShare.cols() * 8;
+    u64 bitSize = inputShare.cols() * 64;
     u64 width = inputShare.rows();
     // i64Matrix inputShare_preScatter(inputShare.rows(), inputShare.cols());
     // i64Matrix inputScaler(inputShare.rows(), inputShare.cols());
     Matrix<u8> inputShare_byte(width, byteSize);
     Matrix<u8> orderedShare_byte(width, byteSize);
-    i64Matrix outputShare(width, inputShare.cols());
+    outputShare.resize(width, inputShare.cols());
     intMat2ByteMat(
         inputShare,
         inputShare_byte,
@@ -275,8 +277,62 @@ void our_extract(
         );
     } else if (alg == Alg::SP) {
         // Merge the Connected labels  
+        i64Matrix labelReversed(inputShare.rows(), inputShare.cols());
+        i64Matrix merged(inputShare.rows(), inputShare.cols());
+        run_ConditionalMerge(
+            prevChl,
+            nextChl,
+            role,
+            inputShare,
+            labelReversed,
+            Matrix<u8>(),
+            merged,
+            multCir_64,
+            false,
+            false        
+        );             
         // Shuffle
+        // Convert input to secret form
+        CommPkg comm = {prevChl, nextChl};
+        Sh3Runtime rt(role, comm);
+        Sh3Encryptor enc;
+        enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+        Sh3BinaryEvaluator eval;    
+        eval.mPrng.SetSeed(toBlock(role));
+        Sh3ShareGen gen;
+        gen.init(toBlock(role), toBlock((role + 1) % 3));
+
+        sbMatrix Merged(width, bitSize);
+        sbMatrix Shuffled(width, bitSize);
+
+        auto task = rt.noDependencies();
+        
+        if (role == 0 || role == 1) {
+        // if (role == 1) {
+            task = enc.localBinMatrix(task, merged, Merged);
+        } else {
+            task = enc.remoteBinMatrix(task, Merged);
+        } 
+        std::vector<size_t> shuffle_next(width);
+        std::vector<size_t> shuffle_prev(width);
+        for (u64 i = 0; i < width; ++i) {
+            shuffle_next[i] = i;
+            shuffle_prev[i] = i;
+        }
+        shuffle(
+            prevChl,
+            nextChl,
+            role,
+            shuffle_prev,
+            shuffle_next,
+            Merged,
+            Shuffled,
+            enc
+        );
         // Selectively Open
+        i64Matrix opened(width, inputShare.cols());
+        task = enc.revealAll(task, Shuffled, opened);
+        task.get();
     } else {
         printf("Unexpected Alg in Ours Extract!\n");
         exit(-1);

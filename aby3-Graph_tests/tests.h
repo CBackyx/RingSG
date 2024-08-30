@@ -16,8 +16,6 @@ void Sh3_Graph_sort_test();
 void Sh3_Graph_PrefixAgg_test();
 void Sh3_Graph_GraphSC_test();
 void Sh3_Graph_CoGNN_test();
-void Sh3_Graph_Ours_App_CC_single_party();
-void Sh3_Graph_Ours_App_SP_single_party();
 
 void Sh3_Graph_Ours_single_party(
     unsigned long long numP, 
@@ -39,4 +37,11 @@ void Sh3_Graph_GraphSC_single_party(
     unsigned long long scale, 
     int algId, 
     unsigned long long numIters
+);
+void Sh3_Graph_Ours_App_single_party(
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters    
 );

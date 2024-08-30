@@ -19,6 +19,8 @@ int main(int argc, char** argv)
 		eval_cognn(num_parts, party_id, scale, alg, iterations);
 	} else if (scheme == 2) {
 		eval_graphsc(num_parts, party_id, scale, alg, iterations);
+	} else if (scheme == 3) {
+		eval_ours_app(num_parts, party_id, scale, alg, iterations);
 	} else {
 		printf("Unexpected scheme!\n");
 		exit(-1);

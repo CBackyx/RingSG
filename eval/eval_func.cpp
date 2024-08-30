@@ -68,3 +68,21 @@ void eval_graphsc(int numParts, int pIdx, int scale, int alg, int iterations)
     print_duration(t_tmp, "GraphSC");
 }
 
+void eval_ours_app(int numParts, int pIdx, int scale, int alg, int iterations)
+{
+    auto t_tmp = std::chrono::high_resolution_clock::now();
+	// Sh3_Graph_CC_test();
+
+    // std::vector<std::thread> thrds;
+    // u64 numP = 5;
+    // for (u64 i = 0; i < numP; ++i)
+    //     thrds.emplace_back(std::thread(Sh3_Graph_Ours_single_party, i));
+
+    // for (u64 i = 0; i < numP; ++i)
+    //     thrds[i].join();
+
+    Sh3_Graph_Ours_App_single_party(numParts, pIdx, scale, alg, iterations);
+
+    print_duration(t_tmp, "oursApp");
+}
+
