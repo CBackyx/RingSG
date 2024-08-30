@@ -16,6 +16,8 @@ void Sh3_Graph_sort_test();
 void Sh3_Graph_PrefixAgg_test();
 void Sh3_Graph_GraphSC_test();
 void Sh3_Graph_CoGNN_test();
+void Sh3_Graph_Ours_App_CC_single_party();
+void Sh3_Graph_Ours_App_SP_single_party();
 
 void Sh3_Graph_Ours_single_party(
     unsigned long long numP, 

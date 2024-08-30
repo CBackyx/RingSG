@@ -3281,3 +3281,867 @@ void Sh3_Graph_CoGNN_single_party(
     // if (failed)
     //     throw std::runtime_error(LOCATION);
 }
+
+void Sh3_Graph_Ours_App_CC_single_party(    
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters
+) {
+	Alg alg;
+	if (algId == 0) {
+		alg = Alg::CC;
+	} else if (algId == 1) {
+		alg = Alg::SP;
+	} else if (algId == 2) {
+		alg = Alg::PR;
+	} else {
+		printf("Unexpected alg!\n");
+		exit(-1);
+	}
+
+    IOService ios(0);
+    std::vector<Session> computeSessions;
+    std::vector<Session> delegateClientSessions; 
+    std::vector<Session> delegateServerSessions; 
+    std::vector<Channel> computeChls;
+    std::vector<Channel> delegateClientChls; 
+    std::vector<Channel> delegateServerChls; 
+
+    u64 serverDstIdx = (pIndex + numP - 1) % numP;
+    u64 helperDstIdx = (pIndex + numP - 2) % numP;
+
+    uint32_t baseComPort = 1712;
+    uint32_t baseDelPort = 1812;
+    std::string baseIP = "10.0.0.";
+    // std::string baseIP = "127.0.0.1";
+
+    // computeChls[pIdx][2], computeChls[pIdx][0]
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // ---->
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP + 2) % numP + 1), baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // <----
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * serverDstIdx + 0, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * helperDstIdx + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * serverDstIdx + 2, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * helperDstIdx + 2, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    // for (auto chl : channels)
+    //     if (chl)
+    //         chl->close();
+
+    // for (auto& cs : computeSessions)
+    //     cs.stop();
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-12"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-12")); 
+    for (u64 j = 0; j < 6; ++j)
+        computeChls.emplace_back(computeSessions[j].addChannel("c"));     
+
+    // ---->
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateClientSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    }
+
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateClientChls.emplace_back(delegateClientSessions[j].addChannel("c"));
+        else delegateClientChls.emplace_back(Channel());
+    }    
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateServerSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    }  
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
+        else delegateServerChls.emplace_back(Channel());
+    }  
+    // <----  
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex == j) 
+    //         delegateClientSessions.emplace_back(Session());
+    //     else if (pIndex < j)
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+    //     else
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    // }
+
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex != j) delegateClientChls.emplace_back(delegateClientSessions[j].addChannel("c"));
+    //     else delegateClientChls.emplace_back(Channel());
+    // }    
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex == j) 
+    //         delegateServerSessions.emplace_back(Session());
+    //     else if (pIndex < j)
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+    //     else
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    // }  
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
+    //     else delegateServerChls.emplace_back(Channel());
+    // }    
+
+    // Initialize graph data
+    // Vertex tag \in {0, 1}
+    // Edges (src, dst)
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
+    std::vector<u64> numVertexList(numP, numVertexPerP);
+    std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
+    std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numVertexPerP; ++j)
+            vertexIdLists[i][j] = i * numVertexPerP + j;
+    }
+    vertexDataLists[0][0] = 1;
+    std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
+    std::vector<std::vector<std::vector<std::array<u64, 2>>>> edgeLists(numP, std::vector<std::vector<std::array<u64, 2>>>(numP));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            if (i == j) {
+                numEdgeMat[i][j] = numIntraEdgePerP;
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+            } else {
+                numEdgeMat[i][j] = numInterEdgePerPair;
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+            }
+        }
+    }    
+
+    BetaLibrary lib;
+    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    orCir_64->levelByAndDepth();   
+    // auto orCir_8 = lib.int_int_bitwiseOr(8, 8, 8);
+    // orCir_8->levelByAndDepth(); 
+
+    CommPkg computeComms[3];
+    computeComms[0] = { computeChls[5], computeChls[2] }; // Client Comms
+    computeComms[1] = { computeChls[4], computeChls[1] }; // Server Comms
+    computeComms[2] = { computeChls[3], computeChls[0] }; // Helper Comms       
+    std::vector<Channel>& delClientChls = delegateClientChls;
+    std::vector<Channel>& delServerChls = delegateServerChls;
+    std::vector<i64Matrix> vertexDatas(3);
+    vertexDatas[0].resize(numVertexList[pIndex], 1);
+    vertexDatas[1].resize(numVertexList[serverDstIdx], 1);
+    vertexDatas[2].resize(numVertexList[helperDstIdx], 1);
+    for (u64 i = 0; i < 3; ++i) vertexDatas[i].setZero();
+    for (u64 i = 0; i < numVertexList[pIndex]; ++i) {
+        vertexDatas[0](i, 0) = vertexDataLists[pIndex][i];
+    }
+    std::vector<i64Matrix> interUpdateShare1(3);
+    std::vector<i64Matrix> interUpdateShare2(3);
+
+    // Load the data to aby3 plaintext data structure
+    // For different characteristics: client, server, helper (maybe in different threads)
+    auto scatterThread = [&](int role, i64Matrix& vertexDataShare, i64Matrix& updateShare1, i64Matrix& updateShare2) {
+        std::vector<u64> srcTag;
+        std::vector<u64> dstTag;
+        i64Matrix updateShare;
+        u64 numEdge = 0;
+        int clientPIdx = 0;
+        if (role == 0) clientPIdx = pIndex;
+        else if (role == 1) clientPIdx = serverDstIdx;
+        else if (role == 2) clientPIdx = helperDstIdx;
+        u64 numVertex = numVertexList[clientPIdx];
+        for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[clientPIdx][i];
+        if (role == 2) vertexDataShare.setZero();
+        updateShare.resize(numEdge, 1);
+        updateShare.setZero();
+        srcTag.resize(numVertex);
+        dstTag.resize(numEdge);
+        if (role == 0) {
+            for (u64 i = 0; i < numVertex; ++i) {
+                srcTag[i] = vertexIdLists[clientPIdx][i];
+            }
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                    dstTag[cnt++] = edgeLists[clientPIdx][i][j][0];
+                }
+            }
+        }
+        our_scatter(
+            computeComms[role].mPrev,
+            computeComms[role].mNext,
+            pIndex,
+            role,
+            srcTag, 
+            dstTag, 
+            vertexDataShare,
+            updateShare,
+            alg
+        );      
+
+        // Decompose update Share and send    
+        std::vector<i64Matrix> updateShares(numP);
+        u64 cnt = 0;
+        for (u64 i = 0; i < numP; ++i) {
+            updateShares[i].resize(numEdgeMat[clientPIdx][i], 1);
+            for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                updateShares[i](j, 0) = updateShare(cnt++, 0);
+            }
+        }
+        if (role == 0) {
+            updateShare1 = updateShares[clientPIdx];
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if ((i + 1) % numP != pIndex) {
+                        // printf("send delClient %d -> %d\n", pIndex, (i + 1) % numP);
+                        // if (!delClientChls[(i + 1) % numP].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delClientChls %d %d %d\n", (i + 1) % numP, pIndex, role);
+                        //     exit(-1);
+                        // }
+                        // delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delClientChls[(i + 1) % numP]);
+                    } else {
+                        // Get the server share for P_{pIdx-1}
+                        updateShare2 = updateShares[i];
+                    }
+                }
+            }
+        } else if (role == 1) {
+            updateShare1 = updateShares[clientPIdx];
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if (i != pIndex) {
+                        // printf("send delServer %d -> %d\n", pIndex, i);
+                        // if (!delServerChls[i].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delServerChls %d %d %d\n", i, pIndex, role);
+                        //     exit(-1);
+                        // }
+                        // delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delServerChls[i]);
+                    } else {
+                        // Get the client share for P_{pIdx}
+                        updateShare2 = updateShares[i];
+                    }
+                }
+            }                
+        }
+    };
+
+    auto gatherThread = [&](int role, i64Matrix& vertexDataShare, const i64Matrix& updateShare1, const i64Matrix& updateShare2) {
+        i64Matrix updatedVertexDataShare = vertexDataShare;
+        updatedVertexDataShare.setZero();
+        std::vector<u64> vertexTag;
+        std::vector<u64> dstTag;
+        i64Matrix updateShare;
+        u64 numEdge = 0;
+        int clientPIdx = 0;
+        if (role == 0) clientPIdx = pIndex;
+        else if (role == 1) clientPIdx = serverDstIdx;
+        else if (role == 2) clientPIdx = helperDstIdx;
+        u64 numVertex = numVertexList[clientPIdx];
+        for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[i][clientPIdx];
+        if (role == 2) vertexDataShare.setZero();
+        updateShare.resize(numEdge, 1);
+        updateShare.setZero();
+        vertexTag.resize(numVertex);
+        dstTag.resize(numEdge);
+        // Decompose update Share and send    
+        std::vector<i64Matrix> updateShares(numP);
+        for (u64 i = 0; i < numP; ++i) {
+            updateShares[i].resize(numEdgeMat[i][clientPIdx], 1);
+        }
+        if (role == 0) {
+            updateShares[clientPIdx] = updateShare1;
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if ((i + 1) % numP != pIndex) {
+                        // printf("recv delServer %d -> %d\n", (i + 1) % numP, pIndex);
+                        // delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delServerChls[(i + 1) % numP]);
+                    } else {
+                        updateShares[i] = updateShare2;
+                    }
+                }
+            }
+        } else if (role == 1) {
+            updateShares[clientPIdx] = updateShare1;
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if (i != pIndex) {
+                        // delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        // printf("recv delClient %d -> %d\n", i, pIndex);
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delClientChls[i]);
+                    } else {
+                        updateShares[i] = updateShare2;
+                    }
+                }
+            }                
+        } 
+        u64 cnt = 0;
+        for (u64 i = 0; i < numP; ++i) {
+            for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                updateShare(cnt++, 0) = updateShares[i](j, 0);
+            }
+        }  
+        if (role == 0) {
+            for (u64 i = 0; i < numVertex; ++i) {
+                vertexTag[i] = vertexIdLists[clientPIdx][i];
+            }
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                    dstTag[cnt++] = edgeLists[i][clientPIdx][j][1];
+                }
+            }
+        } 
+
+        our_gather(
+            computeComms[role].mPrev,
+            computeComms[role].mNext,
+            pIndex,
+            role,
+            dstTag, 
+            vertexTag,
+            updateShare,
+            vertexDataShare,
+            updatedVertexDataShare,
+            alg
+        );        
+        vertexDataShare = updatedVertexDataShare;
+    };
+
+    for (u64 iter = 0; iter < numIters; ++iter) {
+        auto t_tmp = std::chrono::high_resolution_clock::now();
+        
+        std::vector<std::thread> scatterThrds; 
+        for (u64 role = 0; role < 3; ++role) {
+            scatterThrds.emplace_back(scatterThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+        }
+        for (auto& thrd : scatterThrds)
+            thrd.join();
+
+        print_duration(t_tmp, "Scatter");
+        t_tmp = std::chrono::high_resolution_clock::now();
+
+        std::vector<std::thread> gatherThrds;
+        for (u64 role = 0; role < 3; ++role) {
+            if (role != 2) gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[1 - role]));
+            else gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+        }
+        for (auto& thrd : gatherThrds)
+            thrd.join();
+
+        print_duration(t_tmp, "Gather");            
+    }
+
+    // computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
+    asyncSendI64Mat(vertexDatas[1], computeComms[1].mPrev);
+    i64Matrix serverVertexData(numVertexList[pIndex], 1);
+    serverVertexData.setZero();
+    // computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    recvI64Mat(serverVertexData, serverVertexData.size(), computeComms[0].mNext);
+    for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
+
+    u64 sent = 0, recv = 0;
+    for (u64 i = 0; i < 3; ++i) {
+        sent += computeComms[i].mPrev.getTotalDataSent();
+        recv += computeComms[i].mPrev.getTotalDataRecv();
+        sent += computeComms[i].mNext.getTotalDataSent();
+        recv += computeComms[i].mNext.getTotalDataRecv();
+    }
+    for (u64 i = 0; i < delClientChls.size(); ++i) {
+        if (i != pIndex) {
+            sent += delClientChls[i].getTotalDataSent();
+            recv += delClientChls[i].getTotalDataRecv();
+            sent += delServerChls[i].getTotalDataSent();
+            recv += delServerChls[i].getTotalDataRecv();
+        }
+    }
+
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << pIndex << " " << std::endl;
+    std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+        << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+    std::cout << IoStream::unlock;
+
+    // for (u64 j = 0; j < 6; ++j) {
+    //     if (j != pIndex) {
+    //         computeChls[j].close();
+    //         computeSessions[j].stop();
+    //     }
+    // }
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (j != pIndex) {
+    //         delegateClientChls[j].close();
+    //         delegateClientSessions[j].stop();
+    //     }
+    //     if (j != pIndex) {
+    //         delegateServerChls[j].close();
+    //         delegateServerSessions[j].stop();
+    //     }
+    // }
+
+
+    // if (failed)
+    //     throw std::runtime_error(LOCATION);
+}
+
+void Sh3_Graph_Ours_App_SP_single_party(    
+    unsigned long long numP, 
+    unsigned long long pIndex, 
+    unsigned long long scale, 
+    int algId, 
+    unsigned long long numIters
+) {
+	Alg alg;
+	if (algId == 0) {
+		alg = Alg::CC;
+	} else if (algId == 1) {
+		alg = Alg::SP;
+	} else if (algId == 2) {
+		alg = Alg::PR;
+	} else {
+		printf("Unexpected alg!\n");
+		exit(-1);
+	}
+
+    IOService ios(0);
+    std::vector<Session> computeSessions;
+    std::vector<Session> delegateClientSessions; 
+    std::vector<Session> delegateServerSessions; 
+    std::vector<Channel> computeChls;
+    std::vector<Channel> delegateClientChls; 
+    std::vector<Channel> delegateServerChls; 
+
+    u64 serverDstIdx = (pIndex + numP - 1) % numP;
+    u64 helperDstIdx = (pIndex + numP - 2) % numP;
+
+    uint32_t baseComPort = 1712;
+    uint32_t baseDelPort = 1812;
+    std::string baseIP = "10.0.0.";
+    // std::string baseIP = "127.0.0.1";
+
+    // computeChls[pIdx][2], computeChls[pIdx][0]
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // ---->
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseComPort + 3 * pIndex + 2, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP - 1) % numP + 1), baseComPort + 3 * ((pIndex + numP - 1) % numP) + 2, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    computeSessions.emplace_back(Session(ios, baseIP + std::to_string((pIndex + numP + 2) % numP + 1), baseComPort + 3 * ((pIndex + numP + 2) % numP) + 0, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02")); 
+    // <----
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 0, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * serverDstIdx + 0, SessionMode::Client, std::string("comp") + std::to_string(serverDstIdx) + "-01"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * pIndex + 1, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * helperDstIdx + 1, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-02"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * serverDstIdx + 2, SessionMode::Server, std::string("comp") + std::to_string(serverDstIdx) + "-12"));
+    // computeSessions.emplace_back(Session(ios, baseIP, baseComPort + 3 * helperDstIdx + 2, SessionMode::Client, std::string("comp") + std::to_string(helperDstIdx) + "-12"));
+    // for (auto chl : channels)
+    //     if (chl)
+    //         chl->close();
+
+    // for (auto& cs : computeSessions)
+    //     cs.stop();
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-01"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-02"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Server, std::string("comp") + std::to_string(pIndex) + "-12"));
+    // computeSessions.emplace_back(Session(ios, "127.0.0.1", basePort + pIndex, SessionMode::Client, std::string("comp") + std::to_string(pIndex) + "-12")); 
+    for (u64 j = 0; j < 6; ++j)
+        computeChls.emplace_back(computeSessions[j].addChannel("c"));     
+
+    // ---->
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateClientSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateClientSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    }
+
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateClientChls.emplace_back(delegateClientSessions[j].addChannel("c"));
+        else delegateClientChls.emplace_back(Channel());
+    }    
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex == j) 
+            delegateServerSessions.emplace_back(Session());
+        else if (pIndex < j)
+            delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(j + 1), baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+        else
+            delegateServerSessions.emplace_back(Session(ios, baseIP + std::to_string(pIndex + 1), baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    }  
+
+    for (u64 j = 0; j < numP; ++j) {
+        if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
+        else delegateServerChls.emplace_back(Channel());
+    }  
+    // <----  
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex == j) 
+    //         delegateClientSessions.emplace_back(Session());
+    //     else if (pIndex < j)
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + pIndex, SessionMode::Client, std::string("deleClient") + std::to_string(pIndex) + std::to_string(j)));
+    //     else
+    //         delegateClientSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + j, SessionMode::Server, std::string("deleClient") + std::to_string(j) + std::to_string(pIndex)));
+    // }
+
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex != j) delegateClientChls.emplace_back(delegateClientSessions[j].addChannel("c"));
+    //     else delegateClientChls.emplace_back(Channel());
+    // }    
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex == j) 
+    //         delegateServerSessions.emplace_back(Session());
+    //     else if (pIndex < j)
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * j + numP + pIndex, SessionMode::Client, std::string("deleServer") + std::to_string(pIndex) + std::to_string(j)));
+    //     else
+    //         delegateServerSessions.emplace_back(Session(ios, baseIP, baseDelPort + 2 * numP * pIndex + numP + j, SessionMode::Server, std::string("deleServer") + std::to_string(j) + std::to_string(pIndex)));
+    // }  
+
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (pIndex != j) delegateServerChls.emplace_back(delegateServerSessions[j].addChannel("c"));
+    //     else delegateServerChls.emplace_back(Channel());
+    // }    
+
+    // Initialize graph data
+    // Vertex tag \in {0, 1}
+    // Edges (src, dst)
+    u64 numVertexPerP = (1 << scale);
+    u64 numIntraEdgePerP = (1 << scale);
+    u64 numInterEdgePerPair = (1 << scale);
+    std::vector<u64> numVertexList(numP, numVertexPerP);
+    std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
+    std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numVertexPerP; ++j)
+            vertexIdLists[i][j] = i * numVertexPerP + j;
+    }
+    vertexDataLists[0][0] = 1;
+    std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
+    std::vector<std::vector<std::vector<std::array<u64, 2>>>> edgeLists(numP, std::vector<std::vector<std::array<u64, 2>>>(numP));
+    for (u64 i = 0; i < numP; ++i) {
+        for (u64 j = 0; j < numP; ++j) {
+            if (i == j) {
+                numEdgeMat[i][j] = numIntraEdgePerP;
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+            } else {
+                numEdgeMat[i][j] = numInterEdgePerPair;
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+            }
+        }
+    }    
+
+    BetaLibrary lib;
+    auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
+    orCir_64->levelByAndDepth();   
+    // auto orCir_8 = lib.int_int_bitwiseOr(8, 8, 8);
+    // orCir_8->levelByAndDepth(); 
+
+    CommPkg computeComms[3];
+    computeComms[0] = { computeChls[5], computeChls[2] }; // Client Comms
+    computeComms[1] = { computeChls[4], computeChls[1] }; // Server Comms
+    computeComms[2] = { computeChls[3], computeChls[0] }; // Helper Comms       
+    std::vector<Channel>& delClientChls = delegateClientChls;
+    std::vector<Channel>& delServerChls = delegateServerChls;
+    std::vector<i64Matrix> vertexDatas(3);
+    vertexDatas[0].resize(numVertexList[pIndex], 1);
+    vertexDatas[1].resize(numVertexList[serverDstIdx], 1);
+    vertexDatas[2].resize(numVertexList[helperDstIdx], 1);
+    for (u64 i = 0; i < 3; ++i) vertexDatas[i].setZero();
+    for (u64 i = 0; i < numVertexList[pIndex]; ++i) {
+        vertexDatas[0](i, 0) = vertexDataLists[pIndex][i];
+    }
+    std::vector<i64Matrix> interUpdateShare1(3);
+    std::vector<i64Matrix> interUpdateShare2(3);
+
+    // Load the data to aby3 plaintext data structure
+    // For different characteristics: client, server, helper (maybe in different threads)
+    auto scatterThread = [&](int role, i64Matrix& vertexDataShare, i64Matrix& updateShare1, i64Matrix& updateShare2) {
+        std::vector<u64> srcTag;
+        std::vector<u64> dstTag;
+        i64Matrix updateShare;
+        u64 numEdge = 0;
+        int clientPIdx = 0;
+        if (role == 0) clientPIdx = pIndex;
+        else if (role == 1) clientPIdx = serverDstIdx;
+        else if (role == 2) clientPIdx = helperDstIdx;
+        u64 numVertex = numVertexList[clientPIdx];
+        for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[clientPIdx][i];
+        if (role == 2) vertexDataShare.setZero();
+        updateShare.resize(numEdge, 1);
+        updateShare.setZero();
+        srcTag.resize(numVertex);
+        dstTag.resize(numEdge);
+        if (role == 0) {
+            for (u64 i = 0; i < numVertex; ++i) {
+                srcTag[i] = vertexIdLists[clientPIdx][i];
+            }
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                    dstTag[cnt++] = edgeLists[clientPIdx][i][j][0];
+                }
+            }
+        }
+        our_scatter(
+            computeComms[role].mPrev,
+            computeComms[role].mNext,
+            pIndex,
+            role,
+            srcTag, 
+            dstTag, 
+            vertexDataShare,
+            updateShare,
+            alg
+        );      
+
+        // Decompose update Share and send    
+        std::vector<i64Matrix> updateShares(numP);
+        u64 cnt = 0;
+        for (u64 i = 0; i < numP; ++i) {
+            updateShares[i].resize(numEdgeMat[clientPIdx][i], 1);
+            for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                updateShares[i](j, 0) = updateShare(cnt++, 0);
+            }
+        }
+        if (role == 0) {
+            updateShare1 = updateShares[clientPIdx];
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if ((i + 1) % numP != pIndex) {
+                        // printf("send delClient %d -> %d\n", pIndex, (i + 1) % numP);
+                        // if (!delClientChls[(i + 1) % numP].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delClientChls %d %d %d\n", (i + 1) % numP, pIndex, role);
+                        //     exit(-1);
+                        // }
+                        // delClientChls[(i + 1) % numP].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delClientChls[(i + 1) % numP]);
+                    } else {
+                        // Get the server share for P_{pIdx-1}
+                        updateShare2 = updateShares[i];
+                    }
+                }
+            }
+        } else if (role == 1) {
+            updateShare1 = updateShares[clientPIdx];
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if (i != pIndex) {
+                        // printf("send delServer %d -> %d\n", pIndex, i);
+                        // if (!delServerChls[i].isConnected()) {
+                        //     printf("Unexpected Unconnected Channel! delServerChls %d %d %d\n", i, pIndex, role);
+                        //     exit(-1);
+                        // }
+                        // delServerChls[i].asyncSendCopy(updateShares[i].data(), updateShares[i].size());
+                        asyncSendI64Mat(updateShares[i], delServerChls[i]);
+                    } else {
+                        // Get the client share for P_{pIdx}
+                        updateShare2 = updateShares[i];
+                    }
+                }
+            }                
+        }
+    };
+
+    auto gatherThread = [&](int role, i64Matrix& vertexDataShare, const i64Matrix& updateShare1, const i64Matrix& updateShare2) {
+        i64Matrix updatedVertexDataShare = vertexDataShare;
+        updatedVertexDataShare.setZero();
+        std::vector<u64> vertexTag;
+        std::vector<u64> dstTag;
+        i64Matrix updateShare;
+        u64 numEdge = 0;
+        int clientPIdx = 0;
+        if (role == 0) clientPIdx = pIndex;
+        else if (role == 1) clientPIdx = serverDstIdx;
+        else if (role == 2) clientPIdx = helperDstIdx;
+        u64 numVertex = numVertexList[clientPIdx];
+        for (u64 i = 0; i < numP; ++i) numEdge += numEdgeMat[i][clientPIdx];
+        if (role == 2) vertexDataShare.setZero();
+        updateShare.resize(numEdge, 1);
+        updateShare.setZero();
+        vertexTag.resize(numVertex);
+        dstTag.resize(numEdge);
+        // Decompose update Share and send    
+        std::vector<i64Matrix> updateShares(numP);
+        for (u64 i = 0; i < numP; ++i) {
+            updateShares[i].resize(numEdgeMat[i][clientPIdx], 1);
+        }
+        if (role == 0) {
+            updateShares[clientPIdx] = updateShare1;
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if ((i + 1) % numP != pIndex) {
+                        // printf("recv delServer %d -> %d\n", (i + 1) % numP, pIndex);
+                        // delServerChls[(i + 1) % numP].recv(updateShares[i].data(), updateShares[i].size());
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delServerChls[(i + 1) % numP]);
+                    } else {
+                        updateShares[i] = updateShare2;
+                    }
+                }
+            }
+        } else if (role == 1) {
+            updateShares[clientPIdx] = updateShare1;
+            for (int i = 0; i < numP; ++i) {
+                if (i != clientPIdx) {
+                    if (i != pIndex) {
+                        // delClientChls[i].recv(updateShares[i].data(), updateShares[i].size());
+                        // printf("recv delClient %d -> %d\n", i, pIndex);
+                        recvI64Mat(updateShares[i], updateShares[i].size(), delClientChls[i]);
+                    } else {
+                        updateShares[i] = updateShare2;
+                    }
+                }
+            }                
+        } 
+        u64 cnt = 0;
+        for (u64 i = 0; i < numP; ++i) {
+            for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                updateShare(cnt++, 0) = updateShares[i](j, 0);
+            }
+        }  
+        if (role == 0) {
+            for (u64 i = 0; i < numVertex; ++i) {
+                vertexTag[i] = vertexIdLists[clientPIdx][i];
+            }
+            u64 cnt = 0;
+            for (u64 i = 0; i < numP; ++i) {
+                for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                    dstTag[cnt++] = edgeLists[i][clientPIdx][j][1];
+                }
+            }
+        } 
+
+        our_gather(
+            computeComms[role].mPrev,
+            computeComms[role].mNext,
+            pIndex,
+            role,
+            dstTag, 
+            vertexTag,
+            updateShare,
+            vertexDataShare,
+            updatedVertexDataShare,
+            alg
+        );        
+        vertexDataShare = updatedVertexDataShare;
+    };
+
+    for (u64 iter = 0; iter < numIters; ++iter) {
+        auto t_tmp = std::chrono::high_resolution_clock::now();
+        
+        std::vector<std::thread> scatterThrds; 
+        for (u64 role = 0; role < 3; ++role) {
+            scatterThrds.emplace_back(scatterThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+        }
+        for (auto& thrd : scatterThrds)
+            thrd.join();
+
+        print_duration(t_tmp, "Scatter");
+        t_tmp = std::chrono::high_resolution_clock::now();
+
+        std::vector<std::thread> gatherThrds;
+        for (u64 role = 0; role < 3; ++role) {
+            if (role != 2) gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[1 - role]));
+            else gatherThrds.emplace_back(gatherThread, role, std::ref(vertexDatas[role]), std::ref(interUpdateShare1[role]), std::ref(interUpdateShare2[role]));
+        }
+        for (auto& thrd : gatherThrds)
+            thrd.join();
+
+        print_duration(t_tmp, "Gather");            
+    }
+
+    // computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());
+    asyncSendI64Mat(vertexDatas[1], computeComms[1].mPrev);
+    i64Matrix serverVertexData(numVertexList[pIndex], 1);
+    serverVertexData.setZero();
+    // computeComms[0].mNext.recv(serverVertexData.data(), serverVertexData.size());
+    recvI64Mat(serverVertexData, serverVertexData.size(), computeComms[0].mNext);
+    for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
+
+    u64 sent = 0, recv = 0;
+    for (u64 i = 0; i < 3; ++i) {
+        sent += computeComms[i].mPrev.getTotalDataSent();
+        recv += computeComms[i].mPrev.getTotalDataRecv();
+        sent += computeComms[i].mNext.getTotalDataSent();
+        recv += computeComms[i].mNext.getTotalDataRecv();
+    }
+    for (u64 i = 0; i < delClientChls.size(); ++i) {
+        if (i != pIndex) {
+            sent += delClientChls[i].getTotalDataSent();
+            recv += delClientChls[i].getTotalDataRecv();
+            sent += delServerChls[i].getTotalDataSent();
+            recv += delServerChls[i].getTotalDataRecv();
+        }
+    }
+
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << pIndex << " " << std::endl;
+    std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+        << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+    std::cout << IoStream::unlock;
+
+    // for (u64 j = 0; j < 6; ++j) {
+    //     if (j != pIndex) {
+    //         computeChls[j].close();
+    //         computeSessions[j].stop();
+    //     }
+    // }
+    // for (u64 j = 0; j < numP; ++j) {
+    //     if (j != pIndex) {
+    //         delegateClientChls[j].close();
+    //         delegateClientSessions[j].stop();
+    //     }
+    //     if (j != pIndex) {
+    //         delegateServerChls[j].close();
+    //         delegateServerSessions[j].stop();
+    //     }
+    // }
+
+
+    // if (failed)
+    //     throw std::runtime_error(LOCATION);
+}
