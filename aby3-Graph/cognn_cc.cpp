@@ -116,15 +116,15 @@ void cognn_scatter(
 
     // Merge   
     i64Matrix aggedSrcVertexShare_int = srcVertexShare_int;
-    // i64Matrix aggedSrcVertexShare_int = prefix_network_aggregate(
-    //     edgeDstTag,
-    //     srcVertexShare_int,
-    //     aop,
-    //     eval,
-    //     gen,
-    //     rt,
-    //     enc
-    // );
+    i64Matrix aggedSrcVertexShare_int = prefix_network_aggregate(
+        edgeDstTag,
+        srcVertexShare_int,
+        aop,
+        eval,
+        gen,
+        rt,
+        enc
+    );
     Matrix<u8> aggedSrcVertexShare_byte(edgeDstTag.size(), byteSize);
     intMat2ByteMat(
         aggedSrcVertexShare_int,

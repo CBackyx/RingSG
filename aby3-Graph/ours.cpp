@@ -170,16 +170,16 @@ void our_gather(
         exit(-1);
     }    
     // orCir->levelByAndDepth();    
-    // run_OGA(
-    //     prevChl,
-    //     nextChl,
-    //     role,
-    //     sortedUpdateTag, 
-    //     unaggedUpdateShare_int,
-    //     aggedUpdateShare_int,
-    //     mergeCir,
-    //     false
-    // );
+    run_OGA(
+        prevChl,
+        nextChl,
+        role,
+        sortedUpdateTag, 
+        unaggedUpdateShare_int,
+        aggedUpdateShare_int,
+        mergeCir,
+        false
+    );
     Matrix<u8> aggedUpdateShare(updateShare.rows(), byteSize);
     intMat2ByteMat(
         aggedUpdateShare_int,
@@ -216,4 +216,69 @@ void our_gather(
     );
 
     // reconstruct_and_print_matrix(outputShare, pIdx, role, prevChl, nextChl);
+}
+
+void our_extract(
+    Channel& prevChl,
+    Channel& nextChl,
+    int pIdx,
+    int role,
+    const std::vector<u64>& vertexTag, 
+    const i64Matrix& inputShare,
+    i64Matrix& outputShare,
+    Alg alg
+) {
+    BetaLibrary lib;
+    auto multCir_64 = lib.uint_uint_mult(64, 64, 64);
+    auto addCir_64 = lib.int_int_add(64, 64, 64);
+
+    u64 byteSize = inputShare.cols() * 8;
+    u64 width = inputShare.rows();
+    // i64Matrix inputShare_preScatter(inputShare.rows(), inputShare.cols());
+    // i64Matrix inputScaler(inputShare.rows(), inputShare.cols());
+    Matrix<u8> inputShare_byte(width, byteSize);
+    Matrix<u8> orderedShare_byte(width, byteSize);
+    i64Matrix outputShare(width, inputShare.cols());
+    intMat2ByteMat(
+        inputShare,
+        inputShare_byte,
+        byteSize
+    );
+    
+    if (alg == Alg::CC) {
+        // Reorder the vertex list to selected out the group we care;
+        std::vector<u64> orderedTag = vertexTag; // This is mocked
+        run_OEP(
+            prevChl,
+            nextChl,
+            role,
+            vertexTag, 
+            orderedTag, 
+            inputShare_byte,
+            orderedShare_byte        
+        ); 
+        
+        // Aggregate the Connected label;
+        i64Matrix orderedShare_int(width, inputShare.cols());
+        byteMat2intMat(orderedShare_byte, orderedShare_int);
+        auto mergeCir = lib.int_int_bitwiseOr(64, 64, 64);
+        std::vector<u64> aggTag = vertexTag; // This is mocked
+        run_OGA(
+            prevChl,
+            nextChl,
+            role,
+            aggTag, // This is mocked
+            orderedShare_int,
+            outputShare,
+            mergeCir,
+            false
+        );
+    } else if (alg == Alg::SP) {
+        // Merge the Connected labels  
+        // Shuffle
+        // Selectively Open
+    } else {
+        printf("Unexpected Alg in Ours Extract!\n");
+        exit(-1);
+    }
 }
