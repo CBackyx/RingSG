@@ -219,6 +219,46 @@ void our_gather(
     // reconstruct_and_print_matrix(outputShare, pIdx, role, prevChl, nextChl);
 }
 
+void our_gather_dummied(
+    Channel& prevChl,
+    Channel& nextChl,
+    int pIdx,
+    int role,
+    const std::vector<u64>& dstTag, 
+    const std::vector<u64>& vertexTag,
+    const i64Matrix& updateShare,
+    const i64Matrix& vertexShare,
+    i64Matrix& outputShare,
+    Alg alg
+) {
+    // Caveat: This function is only for cost evaluation
+    u64 numUpdates = dstTag.size();
+    u64 dummiedNum = 2 * numUpdates - 1;
+    std::vector<u64> dummiedDstTag(dummiedNum);
+    for (u64 i = 0; i < numUpdates; ++i) {
+        dummiedDstTag[i] = dstTag[i];
+    }
+    for (u64 i = numUpdates; i < dummiedNum; ++i) {
+        dummiedDstTag[i] = (u64)-1;
+    }
+    i64Matrix dummiedUpdateShare(dummiedNum, updateShare.cols());
+    dummiedUpdateShare.setZero();
+    memcpy(dummiedUpdateShare.data(), updateShare.data(), updateShare.size() * sizeof(i64));
+
+    our_gather(
+        prevChl, 
+        nextChl,
+        pIdx,
+        role,
+        dummiedDstTag,
+        vertexTag,
+        dummiedUpdateShare,
+        vertexShare,
+        outputShare,
+        alg
+    );
+}
+
 void our_extract(
     Channel& prevChl,
     Channel& nextChl,
@@ -238,18 +278,18 @@ void our_extract(
     u64 width = inputShare.rows();
     // i64Matrix inputShare_preScatter(inputShare.rows(), inputShare.cols());
     // i64Matrix inputScaler(inputShare.rows(), inputShare.cols());
-    Matrix<u8> inputShare_byte(width, byteSize);
-    Matrix<u8> orderedShare_byte(width, byteSize);
     outputShare.resize(width, inputShare.cols());
-    intMat2ByteMat(
-        inputShare,
-        inputShare_byte,
-        byteSize
-    );
     
     if (alg == Alg::CC) {
         // Reorder the vertex list to selected out the group we care;
         std::vector<u64> orderedTag = vertexTag; // This is mocked
+        Matrix<u8> inputShare_byte(width, byteSize);
+        Matrix<u8> orderedShare_byte(width, byteSize);
+        intMat2ByteMat(
+            inputShare,
+            inputShare_byte,
+            byteSize
+        );
         run_OEP(
             prevChl,
             nextChl,

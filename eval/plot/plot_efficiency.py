@@ -14,9 +14,9 @@ list_schemes = [0, 1, 2] # 0 for Ours
 list_scheme_names = ["ours", "CoGNN", "GraphSC"]
 list_scheme_formal_names = ["Ours", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
-list_num_parts = [6]
-list_scales = [10, 12, 15, 16] # 2 ^ n
-list_scale_names = ["$2^{10}$", "$2^{12}$", "$2^{15}$", "$2^{16}$"]
+list_num_parts = [8]
+list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+list_scale_names = ["$2^{12}$", "$2^{13}$", "$2^{14}$", "$2^{15}$", "$2^{16}$"]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5
@@ -24,7 +24,7 @@ colors = ["#4B5F66", "#E39A56", "#BA5B59"]
 
 # Traverse the log files
 for executable in list_schemes:
-    net_cond = list_net_conds[0]
+    net_cond = list_net_conds[1]
     num_parts = list_num_parts[0]
     for scale_index in range(len(list_scales)):
         scale = list_scales[scale_index]

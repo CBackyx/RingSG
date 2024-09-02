@@ -1270,7 +1270,7 @@ void Sh3_Graph_Ours_test()
                 }
             } 
 
-            our_gather(
+            our_gather_dummied(
                 computeComms[role].mPrev,
                 computeComms[role].mNext,
                 pIdx,
@@ -1373,7 +1373,7 @@ void Sh3_Graph_Ours_single_party(
     u64 helperDstIdx = (pIndex + numP - 2) % numP;
 
     uint32_t baseComPort = 1712;
-    uint32_t baseDelPort = 1812;
+    uint32_t baseDelPort = 1912;
     std::string baseIP = "10.0.0.";
     // std::string baseIP = "127.0.0.1";
 
@@ -1478,7 +1478,7 @@ void Sh3_Graph_Ours_single_party(
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
     u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << scale);
+    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
@@ -1683,7 +1683,7 @@ void Sh3_Graph_Ours_single_party(
             }
         } 
 
-        our_gather(
+        our_gather_dummied(
             computeComms[role].mPrev,
             computeComms[role].mNext,
             pIndex,
@@ -2362,7 +2362,7 @@ void Sh3_Graph_GraphSC_single_party(
 
     u64 numVertexPerP = (1 << scale);
     u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << scale);
+    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
@@ -2838,7 +2838,7 @@ void Sh3_Graph_CoGNN_single_party(
     std::string baseIP = "10.0.0.";
 
     uint32_t baseComPort = 1712;
-    uint32_t baseDelPort = 1812;
+    uint32_t baseDelPort = 1912;
 
     // for (u64 i = 0; i < numP; ++i) {
     //     if (i != pIdx) {
@@ -2978,7 +2978,7 @@ void Sh3_Graph_CoGNN_single_party(
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
     u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << scale);
+    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
@@ -3313,7 +3313,7 @@ void Sh3_Graph_Ours_App_single_party(
     u64 helperDstIdx = (pIndex + numP - 2) % numP;
 
     uint32_t baseComPort = 1712;
-    uint32_t baseDelPort = 1812;
+    uint32_t baseDelPort = 1912;
     std::string baseIP = "10.0.0.";
     // std::string baseIP = "127.0.0.1";
 
@@ -3418,7 +3418,7 @@ void Sh3_Graph_Ours_App_single_party(
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
     u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << scale);
+    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
@@ -3623,7 +3623,7 @@ void Sh3_Graph_Ours_App_single_party(
             }
         } 
 
-        our_gather(
+        our_gather_dummied(
             computeComms[role].mPrev,
             computeComms[role].mNext,
             pIndex,
@@ -3637,6 +3637,8 @@ void Sh3_Graph_Ours_App_single_party(
         );        
         vertexDataShare = updatedVertexDataShare;
     };
+
+    auto t_invo = std::chrono::high_resolution_clock::now();
 
     for (u64 iter = 0; iter < numIters; ++iter) {
         auto t_tmp = std::chrono::high_resolution_clock::now();
@@ -3662,7 +3664,11 @@ void Sh3_Graph_Ours_App_single_party(
         print_duration(t_tmp, "Gather");            
     }
 
+    print_duration(t_invo, "ProtocolInvocation");
+
+    // Application-specific Result Extraction
     if (pIndex == 0 || pIndex == 1 || pIndex == 2) {
+        auto t_ext = std::chrono::high_resolution_clock::now();
         u64 role = pIndex;
         u64 clientPIdx = 0;
         u64 numVertex = numVertexList[clientPIdx];
@@ -3677,6 +3683,7 @@ void Sh3_Graph_Ours_App_single_party(
             vertexDatas[role],
             alg            
         );
+        print_duration(t_ext, "ResultExtract");
     }
 
     // computeComms[1].mPrev.asyncSendCopy(vertexDatas[1].data(), vertexDatas[1].size());

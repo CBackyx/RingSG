@@ -560,56 +560,56 @@ def eval_efficiency():
     # set_root_paths("remove-oga")
     set_root_paths("efficiency")
 
-    # list_schemes = [0] # 0 for Ours
-    # list_net_conds = [(200, 10)]
-    # list_num_parts = [5]
-    # list_scales = [20, 23] # 2 ^ n
-    # list_algs = [0, 1, 2] # 0 for CC
-    # iterations = 5
-
-    # list_schemes = [1] # 0 for Ours
-    # list_net_conds = [(4000, 1), (200, 10)]
-    # list_num_parts = [5]
-    # list_scales = [10] # 2 ^ n
-    # list_algs = [2] # 0 for CC
-    # iterations = 5
-
-    # for cur_scheme in list_schemes:
-    #     for cur_net_cond in list_net_conds:
-    #         for cur_num_parts  in list_num_parts:
-    #             for cur_scale in list_scales:
-    #                 for cur_alg in list_algs:
-    #                     run_graph_processing(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
-
     print("##<------------>##")
 
-    # list_schemes = [0, 1, 2] # 0 for Ours
-    # list_net_conds = [(4000, 1), (200, 10)]
-    # list_num_parts = [5]
-    # list_scales = [10, 15, 17, 18] # 2 ^ n
-    # list_algs = [0, 1, 2] # 0 for CC
-    # iterations = 5
-
-    # list_schemes = [0, 1] # 0 for Ours
-    # list_net_conds = [(4000, 1), (200, 10)]
-    # list_num_parts = [6]
-    # list_scales = [16] # 2 ^ n
-    # list_algs = [0, 1, 2] # 0 for CC
-    # iterations = 5
-
-    list_schemes = [2] # 0 for Ours
-    list_net_conds = [(200, 10)]
+    list_schemes = [0, 1, 2] # 0 for Ours
+    list_net_conds = [(4000, 1), (200, 10)]
+    # list_num_parts = [6, 7, 8, 9, 10]
     list_num_parts = [8]
-    list_scales = [10, 12, 15, 16] # 2 ^ n
+    list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+    # list_scales = [16] # 2 ^ n
     list_algs = [0, 1, 2] # 0 for CC
     iterations = 5
 
-    # list_schemes = [0] # 0 for Ours
-    # list_net_conds = [(4000, 1)]
-    # list_num_parts = [5]
-    # list_scales = [10] # 2 ^ n
-    # list_algs = [0, 1, 2] # 0 for CC
-    # iterations = 5
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_alg in list_algs:
+                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+
+    print("##<-----num part------->##")
+    list_schemes = [0, 1, 2] # 0 for Ours
+    list_net_conds = [(4000, 1), (200, 10)]
+    list_num_parts = [6, 7, 9, 10]
+    # list_num_parts = [8]
+    # list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+    list_scales = [16] # 2 ^ n
+    list_algs = [0, 1, 2] # 0 for CC
+    iterations = 5
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_alg in list_algs:
+                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+
+def eval_app():
+    global iterations
+    global isCluster
+    isCluster = True
+    # set_root_paths("remove-oga")
+    set_root_paths("app")
+
+    print("##<------------>##")
+
+    list_schemes = [3] # 4 for app
+    list_net_conds = [(4000, 10)]
+    list_num_parts = [8]
+    list_scales = [21] # 2 ^ n
+    list_algs = [0, 1] # 0 for CC
+    iterations = 5
 
     for cur_scheme in list_schemes:
         for cur_net_cond in list_net_conds:
@@ -635,6 +635,7 @@ def main():
     parser.add_argument('--cognn-unopt-inference', action='store_true', help='Evaluate CoGNN unoptimized inference efficiency')
     parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
     parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales (number of parties?)')
+    parser.add_argument('--app', action='store_true', help='Evaluate Application')
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
     args = parser.parse_args()
 
@@ -664,6 +665,8 @@ def main():
         smallest_eval_cognn_efficiency()
     if args.efficiency:
         eval_efficiency()
+    if args.app:
+        eval_app()
     if args.all:
         eval_cognn_opt_accuracy()
         eval_cognn_opt_accuracy_no_preprocess()
