@@ -553,20 +553,62 @@ def run_graph_processing_debug(scheme, net_cond, num_parts, scale, alg, iteratio
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
 
+# def eval_efficiency():
+#     global iterations
+#     global isCluster
+#     isCluster = True
+#     # set_root_paths("remove-oga")
+#     set_root_paths("efficiency")
+
+#     print("##<------------>##")
+
+#     list_schemes = [0, 1, 2] # 0 for Ours
+#     list_net_conds = [(4000, 1), (200, 10)]
+#     # list_num_parts = [6, 7, 8, 9, 10]
+#     list_num_parts = [8]
+#     list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+#     # list_scales = [16] # 2 ^ n
+#     list_algs = [0, 1, 2] # 0 for CC
+#     iterations = 5
+
+#     for cur_scheme in list_schemes:
+#         for cur_net_cond in list_net_conds:
+#             for cur_num_parts  in list_num_parts:
+#                 for cur_scale in list_scales:
+#                     for cur_alg in list_algs:
+#                         run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+
+#     print("##<-----num part------->##")
+#     list_schemes = [0, 1, 2] # 0 for Ours
+#     list_net_conds = [(4000, 1), (200, 10)]
+#     list_num_parts = [6, 7, 9, 10]
+#     # list_num_parts = [8]
+#     # list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+#     list_scales = [16] # 2 ^ n
+#     list_algs = [0, 1, 2] # 0 for CC
+#     iterations = 5
+
+#     for cur_scheme in list_schemes:
+#         for cur_net_cond in list_net_conds:
+#             for cur_num_parts  in list_num_parts:
+#                 for cur_scale in list_scales:
+#                     for cur_alg in list_algs:
+#                         run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+
 def eval_efficiency():
     global iterations
     global isCluster
     isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("efficiency")
+    set_root_paths("remove-oga")
+    # set_root_paths("efficiency")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1, 2] # 0 for Ours
+    list_schemes = [0, 1] # 0 for Ours
     list_net_conds = [(4000, 1), (200, 10)]
     # list_num_parts = [6, 7, 8, 9, 10]
     list_num_parts = [8]
-    list_scales = [12, 13, 14, 15, 16] # 2 ^ n
+    list_scales = [16] # 2 ^ n
     # list_scales = [16] # 2 ^ n
     list_algs = [0, 1, 2] # 0 for CC
     iterations = 5
@@ -578,22 +620,6 @@ def eval_efficiency():
                     for cur_alg in list_algs:
                         run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
 
-    print("##<-----num part------->##")
-    list_schemes = [0, 1, 2] # 0 for Ours
-    list_net_conds = [(4000, 1), (200, 10)]
-    list_num_parts = [6, 7, 9, 10]
-    # list_num_parts = [8]
-    # list_scales = [12, 13, 14, 15, 16] # 2 ^ n
-    list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
-    iterations = 5
-
-    for cur_scheme in list_schemes:
-        for cur_net_cond in list_net_conds:
-            for cur_num_parts  in list_num_parts:
-                for cur_scale in list_scales:
-                    for cur_alg in list_algs:
-                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
 
 def eval_app():
     global iterations
@@ -605,18 +631,41 @@ def eval_app():
     print("##<------------>##")
 
     list_schemes = [3] # 4 for app
-    list_net_conds = [(4000, 10)]
+    list_net_conds = [(4000, 1)]
     list_num_parts = [8]
-    list_scales = [21] # 2 ^ n
+    list_scales = [19] # 2 ^ n
     list_algs = [0, 1] # 0 for CC
-    iterations = 5
+    iterations = 10
 
     for cur_scheme in list_schemes:
         for cur_net_cond in list_net_conds:
             for cur_num_parts  in list_num_parts:
                 for cur_scale in list_scales:
                     for cur_alg in list_algs:
-                        run_graph_processing_debug(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+
+def eval_prior_non_e2e():
+    global iterations
+    global isCluster
+    isCluster = True
+    # set_root_paths("remove-oga")
+    set_root_paths("prior-non-e2e")
+
+    print("##<------------>##")
+
+    list_schemes = [1, 2] # 4 for app
+    list_net_conds = [(4000, 1)]
+    list_num_parts = [8]
+    list_scales = [19] # 2 ^ n
+    list_algs = [0, 1] # 0 for CC
+    iterations = 10
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_alg in list_algs:
+                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
 
 
 # Define the main function to parse command line arguments and call the appropriate functions
@@ -636,6 +685,7 @@ def main():
     parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
     parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales (number of parties?)')
     parser.add_argument('--app', action='store_true', help='Evaluate Application')
+    parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e')
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
     args = parser.parse_args()
 
@@ -667,6 +717,8 @@ def main():
         eval_efficiency()
     if args.app:
         eval_app()
+    if args.prior_non_e2e:
+        eval_prior_non_e2e()
     if args.all:
         eval_cognn_opt_accuracy()
         eval_cognn_opt_accuracy_no_preprocess()

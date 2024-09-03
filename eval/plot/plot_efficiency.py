@@ -16,7 +16,7 @@ list_scheme_formal_names = ["Ours", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [8]
 list_scales = [12, 13, 14, 15, 16] # 2 ^ n
-list_scale_names = ["$2^{12}$", "$2^{13}$", "$2^{14}$", "$2^{15}$", "$2^{16}$"]
+list_scale_names = ["$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5
@@ -80,7 +80,7 @@ for alg in list_algs:
     axes[row, 0].legend()
     
     axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication')
-    axes[row, 1].set_xlabel('Size')
+    axes[row, 1].set_xlabel('Size of Global Graph')
     axes[row, 1].set_xticks(list_scales, list_scale_names)
     axes[row, 1].set_ylabel('Per-party Comm (GB)')
     axes[row, 1].legend()
