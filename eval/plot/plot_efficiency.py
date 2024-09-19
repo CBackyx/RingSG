@@ -74,7 +74,7 @@ for alg in list_algs:
     print("Comm GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['communication'], data[alg][0]['communication'])])
     
     axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration')
-    axes[row, 0].set_xlabel('Size')
+    axes[row, 0].set_xlabel('Size of Global Graph')
     axes[row, 0].set_xticks(list_scales, list_scale_names)
     axes[row, 0].set_ylabel('Running Time (seconds)')
     axes[row, 0].legend()
