@@ -3737,3 +3737,141 @@ void Sh3_Graph_Ours_App_single_party(
     // if (failed)
     //     throw std::runtime_error(LOCATION);
 }
+
+void Sh3_Graph_reverse_shuffle_test() {
+
+    IOService ios;
+    Session s01(ios, "127.0.0.1", SessionMode::Server, "01");
+    Session s10(ios, "127.0.0.1", SessionMode::Client, "01");
+    Session s02(ios, "127.0.0.1", SessionMode::Server, "02");
+    Session s20(ios, "127.0.0.1", SessionMode::Client, "02");
+    Session s12(ios, "127.0.0.1", SessionMode::Server, "12");
+    Session s21(ios, "127.0.0.1", SessionMode::Client, "12");
+
+    Channel chl01 = s01.addChannel("c");
+    Channel chl10 = s10.addChannel("c");
+    Channel chl02 = s02.addChannel("c");
+    Channel chl20 = s20.addChannel("c");
+    Channel chl12 = s12.addChannel("c");
+    Channel chl21 = s21.addChannel("c");
+
+
+    CommPkg comms[3], debugComm[3];
+    comms[0] = { chl02, chl01 };
+    comms[1] = { chl10, chl12 };
+    comms[2] = { chl21, chl20 };
+
+    u64 wordSize = 1;
+    u64 bitSize = wordSize << 6;
+
+    u64 width = 1 << 3;
+    std::atomic<bool> failed(false);
+    //bool manual = false;
+
+    Sh3BinaryEvaluator evals[3];
+
+    i64Matrix value(width, wordSize);
+
+    PRNG prng(ZeroBlock);
+    for (u64 i = 0; i < width; ++i) {
+        for (u64 j = 0; j < wordSize; ++j) value(i, j) = i;
+    }
+
+    std::vector<std::vector<u64>> perms(3);
+    std::vector<std::vector<u64>> inv_perms(3);
+    perms[0] = {0, 1, 2, 4, 3, 5, 6, 7};
+    perms[1] = {1, 0, 2, 3, 4, 5, 6, 7};
+    perms[2] = {0, 1, 2, 3, 4, 6, 5, 7};
+    inv_perms[0] = perms[0];
+    for (u64 i = 0; i < perms[0].size(); ++i) inv_perms[0][perms[0][i]] = i;
+    inv_perms[1] = perms[1];
+    for (u64 i = 0; i < perms[1].size(); ++i) inv_perms[1][perms[1][i]] = i;
+    inv_perms[2] = perms[2];
+    for (u64 i = 0; i < perms[2].size(); ++i) inv_perms[2][perms[2][i]] = i;
+
+    auto routine = [&](int pIdx) {
+        CommPkg& comm = comms[pIdx];
+        int role = pIdx;
+        Sh3Runtime rt(role, comm);
+        Sh3Encryptor enc;
+        enc.init(role, toBlock(role), toBlock((role + 1) % 3));
+        Sh3BinaryEvaluator eval;    
+        eval.mPrng.SetSeed(toBlock(role));
+        Sh3ShareGen gen;
+        gen.init(toBlock(role), toBlock((role + 1) % 3));
+        
+        sbMatrix input(width, bitSize), output(width, bitSize);
+        i64Matrix plainOutput(width, wordSize);
+
+        if (pIdx == 0) enc.localBinMatrix(rt.noDependencies(), value, input).get();
+        else enc.remoteBinMatrix(rt.noDependencies(), input).get();
+
+        std::vector<u64> prevPerm, nextPerm;
+        // shuffle(
+        //     comm.mPrev,
+        //     comm.mNext,
+        //     role,
+        //     perms[role],
+        //     perms[(role + 1) % 3],
+        //     input,
+        //     output,
+        //     enc
+        // );
+
+        reverse_shuffle(
+            comm.mPrev,
+            comm.mNext,
+            role,
+            inv_perms[role],
+            inv_perms[(role + 1) % 3],
+            input,
+            output,
+            enc
+        );
+
+        // output = input;
+
+        enc.revealAll(rt.noDependencies(), output, plainOutput).get();
+        
+        if (pIdx == 0) {
+            for (u64 i = 0; i < width; ++i) {
+                for (u64 j = 0; j < wordSize; ++j) {
+                    oc::lout << u64(plainOutput(i, j)) << " ";
+                    // if (gtAgg(slot, j) != agged(slot, j)) {
+                    //     if (pIdx == 0) oc::lout << Color::Red << "pidx: " << pIdx << " failed at " << slot << " " << j << " "
+                    //         << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;
+                    //     failed = true;
+                    // } else {
+                    //     // if (pIdx == 0) oc::lout << Color::Green << "pidx: " << pIdx << " succeeded at " << slot << " " << j << " "
+                    //     //     << std::setw(2) << i64(gtAgg(slot, j)) << " " << i64(agged(slot, j)) << std::endl << std::dec;                    
+                    // }
+                }
+                oc::lout << std::endl;
+            }
+        }
+
+        u64 sent = 0, recv = 0;
+        sent += comms[pIdx].mPrev.getTotalDataSent();
+        sent += comms[pIdx].mNext.getTotalDataSent();
+        recv += comms[pIdx].mPrev.getTotalDataRecv();
+        recv += comms[pIdx].mNext.getTotalDataRecv();
+
+        std::cout << IoStream::lock;
+        std::cout << "pIdx::" << pIdx << " " << std::endl;
+        std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
+            << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+        std::cout << IoStream::unlock;
+
+    };
+
+    auto t0 = std::thread(routine, 0);
+    auto t1 = std::thread(routine, 1);
+    auto t2 = std::thread(routine, 2);
+
+    t0.join();
+    t1.join();
+    t2.join();
+
+    if (failed)
+        throw std::runtime_error(LOCATION);
+}
