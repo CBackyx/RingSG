@@ -3791,14 +3791,13 @@ void Sh3_Graph_reverse_shuffle_test() {
 
     auto routine = [&](int pIdx) {
         CommPkg& comm = comms[pIdx];
+        // CommPkg invComm;
+        // invComm.mNext = comm.mPrev;
+        // invComm.mPrev = comm.mNext;
         int role = pIdx;
         Sh3Runtime rt(role, comm);
         Sh3Encryptor enc;
         enc.init(role, toBlock(role), toBlock((role + 1) % 3));
-        Sh3BinaryEvaluator eval;    
-        eval.mPrng.SetSeed(toBlock(role));
-        Sh3ShareGen gen;
-        gen.init(toBlock(role), toBlock((role + 1) % 3));
         
         sbMatrix input(width, bitSize), output(width, bitSize);
         i64Matrix plainOutput(width, wordSize);
@@ -3807,16 +3806,18 @@ void Sh3_Graph_reverse_shuffle_test() {
         else enc.remoteBinMatrix(rt.noDependencies(), input).get();
 
         std::vector<u64> prevPerm, nextPerm;
-        // shuffle(
-        //     comm.mPrev,
-        //     comm.mNext,
-        //     role,
-        //     perms[role],
-        //     perms[(role + 1) % 3],
-        //     input,
-        //     output,
-        //     enc
-        // );
+        shuffle(
+            comm.mPrev,
+            comm.mNext,
+            role,
+            perms[role],
+            perms[(role + 1) % 3],
+            input,
+            output,
+            enc 
+        );
+
+        input = output;
 
         reverse_shuffle(
             comm.mPrev,
