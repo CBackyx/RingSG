@@ -3779,9 +3779,9 @@ void Sh3_Graph_reverse_shuffle_test() {
 
     std::vector<std::vector<u64>> perms(3);
     std::vector<std::vector<u64>> inv_perms(3);
-    perms[0] = {0, 1, 2, 4, 3, 5, 6, 7};
-    perms[1] = {1, 0, 2, 3, 4, 5, 6, 7};
-    perms[2] = {0, 1, 2, 3, 4, 6, 5, 7};
+    perms[0] = {1, 0, 2, 3, 4, 5, 6, 7};
+    perms[1] = {0, 2, 1, 3, 4, 5, 6, 7};
+    perms[2] = {0, 1, 3, 2, 4, 5, 6, 7};
     inv_perms[0] = perms[0];
     for (u64 i = 0; i < perms[0].size(); ++i) inv_perms[0][perms[0][i]] = i;
     inv_perms[1] = perms[1];
@@ -3805,7 +3805,6 @@ void Sh3_Graph_reverse_shuffle_test() {
         if (pIdx == 0) enc.localBinMatrix(rt.noDependencies(), value, input).get();
         else enc.remoteBinMatrix(rt.noDependencies(), input).get();
 
-        std::vector<u64> prevPerm, nextPerm;
         shuffle(
             comm.mPrev,
             comm.mNext,
@@ -3829,8 +3828,6 @@ void Sh3_Graph_reverse_shuffle_test() {
             output,
             enc
         );
-
-        // output = input;
 
         enc.revealAll(rt.noDependencies(), output, plainOutput).get();
         
