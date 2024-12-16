@@ -14,7 +14,7 @@ using namespace oc;
 using namespace aby3;
 
 
-void eval_ours(int numParts, int pIdx, int scale, int alg, int iterations)
+void eval_ours(int numParts, int pIdx, int scale, int avgDegree, double interRatio, int alg, int iterations)
 {
     auto t_tmp = std::chrono::high_resolution_clock::now();
 	// Sh3_Graph_CC_test();
@@ -27,12 +27,12 @@ void eval_ours(int numParts, int pIdx, int scale, int alg, int iterations)
     // for (u64 i = 0; i < numP; ++i)
     //     thrds[i].join();
 
-    Sh3_Graph_Ours_single_party(numParts, pIdx, scale, alg, iterations);
+    Sh3_Graph_Ours_single_party(numParts, pIdx, scale, avgDegree, interRatio, alg, iterations);
 
     print_duration(t_tmp, "ours");
 }
 
-void eval_cognn(int numParts, int pIdx, int scale, int alg, int iterations)
+void eval_cognn(int numParts, int pIdx, int scale, int avgDegree, double interRatio, int alg, int iterations)
 {
     auto t_tmp = std::chrono::high_resolution_clock::now();
 	// Sh3_Graph_CC_test();
@@ -45,12 +45,12 @@ void eval_cognn(int numParts, int pIdx, int scale, int alg, int iterations)
     // for (u64 i = 0; i < numP; ++i)
     //     thrds[i].join();
 
-    Sh3_Graph_CoGNN_single_party(numParts, pIdx, scale, alg, iterations);
+    Sh3_Graph_CoGNN_single_party(numParts, pIdx, scale, avgDegree, interRatio, alg, iterations);
 
     print_duration(t_tmp, "CoGNN");
 }
 
-void eval_graphsc(int numParts, int pIdx, int scale, int alg, int iterations)
+void eval_graphsc(int numParts, int pIdx, int scale, int avgDegree, double interRatio, int alg, int iterations)
 {
     auto t_tmp = std::chrono::high_resolution_clock::now();
 	// Sh3_Graph_CC_test();
@@ -63,12 +63,12 @@ void eval_graphsc(int numParts, int pIdx, int scale, int alg, int iterations)
     // for (u64 i = 0; i < numP; ++i)
     //     thrds[i].join();
 
-    Sh3_Graph_GraphSC_single_party(numParts, pIdx, scale, alg, iterations);
+    Sh3_Graph_GraphSC_single_party(numParts, pIdx, scale, avgDegree, interRatio, alg, iterations);
 
     print_duration(t_tmp, "GraphSC");
 }
 
-void eval_ours_app(int numParts, int pIdx, int scale, int alg, int iterations)
+void eval_ours_app(int numParts, int pIdx, int scale, int avgDegree, double interRatio, int alg, int iterations)
 {
     auto t_tmp = std::chrono::high_resolution_clock::now();
 	// Sh3_Graph_CC_test();
@@ -81,7 +81,7 @@ void eval_ours_app(int numParts, int pIdx, int scale, int alg, int iterations)
     // for (u64 i = 0; i < numP; ++i)
     //     thrds[i].join();
 
-    Sh3_Graph_Ours_App_single_party(numParts, pIdx, scale, alg, iterations);
+    Sh3_Graph_Ours_App_single_party(numParts, pIdx, scale, avgDegree, interRatio, alg, iterations);
 
     print_duration(t_tmp, "oursApp");
 }

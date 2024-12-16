@@ -22,6 +22,8 @@ void Sh3_Graph_Ours_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 );
@@ -29,6 +31,8 @@ void Sh3_Graph_CoGNN_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 );
@@ -36,6 +40,8 @@ void Sh3_Graph_GraphSC_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 );
@@ -43,6 +49,8 @@ void Sh3_Graph_Ours_App_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters    
 );

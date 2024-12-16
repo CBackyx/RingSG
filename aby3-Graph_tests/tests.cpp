@@ -1346,6 +1346,8 @@ void Sh3_Graph_Ours_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 ) {
@@ -1477,14 +1479,16 @@ void Sh3_Graph_Ours_single_party(
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
-    u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
+    int numEdgePerP = (1 << scale) * avgDegree;
+    u64 numIntraEdgePerP = numEdgePerP * (1 - interRatio);
+    u64 numInterEdgePerPair = (numEdgePerP * interRatio) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
-        for (u64 j = 0; j < numVertexPerP; ++j)
+        for (u64 j = 0; j < numVertexPerP; ++j) {
             vertexIdLists[i][j] = i * numVertexPerP + j;
+        }
     }
     vertexDataLists[0][0] = 1;
     std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
@@ -1494,14 +1498,30 @@ void Sh3_Graph_Ours_single_party(
             if (i == j) {
                 numEdgeMat[i][j] = numIntraEdgePerP;
                 // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
-                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[i][k]});
+                        if (++cnt > numIntraEdgePerP) break;
+                    }
+                    if (cnt > numIntraEdgePerP) break;
+                }
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
             } else {
                 numEdgeMat[i][j] = numInterEdgePerPair;
                 // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
-                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[j][k]});
+                        if (++cnt > numInterEdgePerPair) break;
+                    }
+                    if (cnt > numInterEdgePerPair) break;
+                }
             }
         }
-    }    
+    }   
 
     BetaLibrary lib;
     auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
@@ -2298,6 +2318,8 @@ void Sh3_Graph_GraphSC_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 ) {
@@ -2361,14 +2383,16 @@ void Sh3_Graph_GraphSC_single_party(
     };
 
     u64 numVertexPerP = (1 << scale);
-    u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
+    int numEdgePerP = (1 << scale) * avgDegree;
+    u64 numIntraEdgePerP = numEdgePerP * (1 - interRatio);
+    u64 numInterEdgePerPair = (numEdgePerP * interRatio) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
-        for (u64 j = 0; j < numVertexPerP; ++j)
+        for (u64 j = 0; j < numVertexPerP; ++j) {
             vertexIdLists[i][j] = i * numVertexPerP + j;
+        }
     }
     vertexDataLists[0][0] = 1;
     std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
@@ -2377,13 +2401,31 @@ void Sh3_Graph_GraphSC_single_party(
         for (u64 j = 0; j < numP; ++j) {
             if (i == j) {
                 numEdgeMat[i][j] = numIntraEdgePerP;
-                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[i][k]});
+                        if (++cnt > numIntraEdgePerP) break;
+                    }
+                    if (cnt > numIntraEdgePerP) break;
+                }
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
             } else {
                 numEdgeMat[i][j] = numInterEdgePerPair;
-                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[j][k]});
+                        if (++cnt > numInterEdgePerPair) break;
+                    }
+                    if (cnt > numInterEdgePerPair) break;
+                }
             }
         }
-    }  
+    } 
 
     // std::string file_path = "./../test-data/small_graph.csv";
     DataFrame df; // = load_dataframe_from_csv(file_path, false, false);
@@ -2812,6 +2854,8 @@ void Sh3_Graph_CoGNN_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 ) {
@@ -2977,14 +3021,16 @@ void Sh3_Graph_CoGNN_single_party(
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
-    u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
+    int numEdgePerP = (1 << scale) * avgDegree;
+    u64 numIntraEdgePerP = numEdgePerP * (1 - interRatio);
+    u64 numInterEdgePerPair = (numEdgePerP * interRatio) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
-        for (u64 j = 0; j < numVertexPerP; ++j)
+        for (u64 j = 0; j < numVertexPerP; ++j) {
             vertexIdLists[i][j] = i * numVertexPerP + j;
+        }
     }
     vertexDataLists[0][0] = 1;
     std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
@@ -2994,14 +3040,30 @@ void Sh3_Graph_CoGNN_single_party(
             if (i == j) {
                 numEdgeMat[i][j] = numIntraEdgePerP;
                 // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
-                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[i][k]});
+                        if (++cnt > numIntraEdgePerP) break;
+                    }
+                    if (cnt > numIntraEdgePerP) break;
+                }
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
             } else {
                 numEdgeMat[i][j] = numInterEdgePerPair;
                 // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
-                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[j][k]});
+                        if (++cnt > numInterEdgePerPair) break;
+                    }
+                    if (cnt > numInterEdgePerPair) break;
+                }
             }
         }
-    }    
+    }   
 
     BetaLibrary lib;
     auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
@@ -3286,6 +3348,8 @@ void Sh3_Graph_Ours_App_single_party(
     unsigned long long numP, 
     unsigned long long pIndex, 
     unsigned long long scale, 
+    unsigned long long avgDegree,
+    double interRatio,
     int algId, 
     unsigned long long numIters
 ) {
@@ -3417,14 +3481,16 @@ void Sh3_Graph_Ours_App_single_party(
     // Vertex tag \in {0, 1}
     // Edges (src, dst)
     u64 numVertexPerP = (1 << scale);
-    u64 numIntraEdgePerP = (1 << scale);
-    u64 numInterEdgePerPair = (1 << (scale + 1)) / (numP - 1);
+    int numEdgePerP = (1 << scale) * avgDegree;
+    u64 numIntraEdgePerP = numEdgePerP * (1 - interRatio);
+    u64 numInterEdgePerPair = (numEdgePerP * interRatio) / (numP - 1);
     std::vector<u64> numVertexList(numP, numVertexPerP);
     std::vector<std::vector<u64>> vertexIdLists(numP, std::vector<u64>(numVertexPerP, 0));
     std::vector<std::vector<u64>> vertexDataLists(numP, std::vector<u64>(numVertexPerP, 0));
     for (u64 i = 0; i < numP; ++i) {
-        for (u64 j = 0; j < numVertexPerP; ++j)
+        for (u64 j = 0; j < numVertexPerP; ++j) {
             vertexIdLists[i][j] = i * numVertexPerP + j;
+        }
     }
     vertexDataLists[0][0] = 1;
     std::vector<std::vector<u64>> numEdgeMat(numP, std::vector<u64>(numP));
@@ -3434,14 +3500,30 @@ void Sh3_Graph_Ours_App_single_party(
             if (i == j) {
                 numEdgeMat[i][j] = numIntraEdgePerP;
                 // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[i][0]});
-                for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[i][k]});
+                        if (++cnt > numIntraEdgePerP) break;
+                    }
+                    if (cnt > numIntraEdgePerP) break;
+                }
+                // for (u64 k = 0; k < numIntraEdgePerP; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[i][k]});
             } else {
                 numEdgeMat[i][j] = numInterEdgePerPair;
                 // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][k], vertexIdLists[j][0]});
-                for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                // for (u64 k = 0; k < numInterEdgePerPair; ++k) edgeLists[i][j].push_back({vertexIdLists[i][0], vertexIdLists[j][k]});
+                u64 cnt = 0;
+                for (u64 m = 0; m < numVertexPerP; ++m) {
+                    for (u64 k = 0; k < numVertexPerP; ++k) {
+                        edgeLists[i][j].push_back({vertexIdLists[i][m], vertexIdLists[j][k]});
+                        if (++cnt > numInterEdgePerPair) break;
+                    }
+                    if (cnt > numInterEdgePerPair) break;
+                }
             }
         }
-    }    
+    }   
 
     BetaLibrary lib;
     auto orCir_64 = lib.int_int_bitwiseOr(64, 64, 64);
