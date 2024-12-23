@@ -499,7 +499,34 @@ def run_graph_processing(scheme, net_cond, num_parts, scale, alg, iterations):
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
 
-def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, alg, iterations):
+def run_graph_processing_with_limited_cores_for_avgDegree(scheme, net_cond, num_parts, scale, avgDegree, interRatio, alg, iterations):
+    cur_bandwidth = net_cond[0]
+    cur_latency = net_cond[1]
+    if isCluster:
+        setup_network(cur_bandwidth, cur_latency)
+
+    log_path = log_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/avgDegree_" + str(avgDegree) + "/interRatio_" + str(interRatio) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(log_path)
+
+    executable_path = executable_root_path + "./out/build/linux/eval/eval"
+    processList = []
+    start_io = commMeaStart()
+    for i in range(num_parts):
+        cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
+        cmd += ["taskset", "--cpu-list"]
+        cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
+        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(avgDegree), str(interRatio), str(alg), str(iterations)]
+        print(" ".join(cmd))
+        log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
+        processList.append(subprocess.Popen(cmd, stdout=log_f))
+    for process in processList:
+        process.wait()
+    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/avgDegree_" + str(avgDegree) + "/interRatio_" + str(interRatio)  + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(comm_log_path)
+    commMeaEnd(start_io, comm_log_path + "comm")
+    processList = []
+
+def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, avgDegree, interRatio, alg, iterations):
     cur_bandwidth = net_cond[0]
     cur_latency = net_cond[1]
     if isCluster:
@@ -515,13 +542,13 @@ def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, 
         cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
         cmd += ["taskset", "--cpu-list"]
         cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
-        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(alg), str(iterations)]
+        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(avgDegree), str(interRatio), str(alg), str(iterations)]
         print(" ".join(cmd))
         log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
         processList.append(subprocess.Popen(cmd, stdout=log_f))
     for process in processList:
         process.wait()
-    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale)  + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
     my_makedir(comm_log_path)
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
@@ -599,16 +626,19 @@ def eval_efficiency():
     global iterations
     global isCluster
     isCluster = True
-    set_root_paths("remove-oga")
-    # set_root_paths("efficiency")
+    # set_root_paths("remove-oga")
+    set_root_paths("efficiency")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1] # 0 for Ours
+    list_schemes = [0, 1, 2] # 0 for Ours
     list_net_conds = [(4000, 1), (200, 10)]
+    # list_net_conds = [(400, 1)]
     # list_num_parts = [6, 7, 8, 9, 10]
-    list_num_parts = [8]
+    list_num_parts = [3, 4, 5]
     list_scales = [16] # 2 ^ n
+    list_avgDegrees = [3]
+    list_interRatios = [0.4]
     # list_scales = [16] # 2 ^ n
     list_algs = [0, 1, 2] # 0 for CC
     iterations = 5
@@ -617,8 +647,41 @@ def eval_efficiency():
         for cur_net_cond in list_net_conds:
             for cur_num_parts  in list_num_parts:
                 for cur_scale in list_scales:
-                    for cur_alg in list_algs:
-                        run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRario in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
+
+def eval_vertex_degree():
+    global iterations
+    global isCluster
+    isCluster = True
+    # set_root_paths("remove-oga")
+    set_root_paths("vertex-degree")
+
+    print("##<------------>##")
+
+    list_schemes = [2] # 0 for Ours
+    # list_net_conds = [(4000, 1), (200, 10)]
+    list_net_conds = [(4000, 1)]
+    # list_net_conds = [(400, 1)]
+    # list_num_parts = [6, 7, 8, 9, 10]
+    list_num_parts = [6]
+    list_scales = [16] # 2 ^ n
+    list_avgDegrees = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    list_interRatios = [0.4]
+    # list_scales = [16] # 2 ^ n
+    list_algs = [0, 1, 2] # 0 for CC
+    iterations = 5
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRario in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
 
 
 def eval_app():
@@ -684,6 +747,7 @@ def main():
     parser.add_argument('--cognn-unopt-inference', action='store_true', help='Evaluate CoGNN unoptimized inference efficiency')
     parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
     parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales (number of parties?)')
+    parser.add_argument('--vertex-degree', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
     parser.add_argument('--app', action='store_true', help='Evaluate Application')
     parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e')
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
@@ -715,6 +779,8 @@ def main():
         smallest_eval_cognn_efficiency()
     if args.efficiency:
         eval_efficiency()
+    if args.vertex_degree:
+        eval_vertex_degree()
     if args.app:
         eval_app()
     if args.prior_non_e2e:
