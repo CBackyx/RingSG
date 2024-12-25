@@ -661,12 +661,12 @@ def eval_vertex_degree():
 
     print("##<------------>##")
 
-    list_schemes = [2] # 0 for Ours
+    list_schemes = [0, 1, 2] # 0 for Ours
     # list_net_conds = [(4000, 1), (200, 10)]
     list_net_conds = [(4000, 1)]
     # list_net_conds = [(400, 1)]
     # list_num_parts = [6, 7, 8, 9, 10]
-    list_num_parts = [6]
+    list_num_parts = [8]
     list_scales = [16] # 2 ^ n
     list_avgDegrees = [2, 3, 4, 5, 6, 7, 8, 9, 10]
     list_interRatios = [0.4]
@@ -683,6 +683,36 @@ def eval_vertex_degree():
                             for cur_alg in list_algs:
                                 run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
 
+def eval_3pc_cmp():
+    global iterations
+    global isCluster
+    isCluster = True
+    # set_root_paths("remove-oga")
+    set_root_paths("3pc-cmp")
+
+    print("##<------------>##")
+
+    list_schemes = [2] # 0 for Ours
+    # list_net_conds = [(4000, 1), (200, 10)]
+    list_net_conds = [(4000, 1)]
+    # list_net_conds = [(400, 1)]
+    # list_num_parts = [6, 7, 8, 9, 10]
+    list_num_parts = [8]
+    list_scales = [16] # 2 ^ n
+    list_avgDegrees = [3]
+    list_interRatios = [0.4]
+    # list_scales = [16] # 2 ^ n
+    list_algs = [0, 1, 2] # 0 for CC
+    iterations = 20
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRario in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
 
 def eval_app():
     global iterations
@@ -748,6 +778,7 @@ def main():
     parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
     parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales (number of parties?)')
     parser.add_argument('--vertex-degree', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
+    parser.add_argument('--three-pc-cmp', action='store_true', help='Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion.')
     parser.add_argument('--app', action='store_true', help='Evaluate Application')
     parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e')
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
@@ -781,6 +812,8 @@ def main():
         eval_efficiency()
     if args.vertex_degree:
         eval_vertex_degree()
+    if args.three_pc_cmp:
+        eval_3pc_cmp()
     if args.app:
         eval_app()
     if args.prior_non_e2e:
