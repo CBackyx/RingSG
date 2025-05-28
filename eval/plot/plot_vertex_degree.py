@@ -12,7 +12,7 @@ data = {}
 
 list_schemes = [0, 1, 2] # 0 for Ours
 list_scheme_names = ["ours", "CoGNN", "GraphSC"]
-list_scheme_formal_names = ["Ours", "CoGNN", "GraphSC"]
+list_scheme_formal_names = ["RingSG", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [8]
 list_scales = [16] # 2 ^ n
@@ -63,7 +63,7 @@ print(data)
 # exit(-1)
 
 # Plot the results
-fig, axes = plt.subplots(3, 2, figsize=(6, 6))
+fig, axes = plt.subplots(3, 2, figsize=(8, 6))
 
 for alg in list_algs:
     row = alg
@@ -75,15 +75,17 @@ for alg in list_algs:
     print("Comm CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['communication'], data[alg][0]['communication'])])
     print("Comm GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['communication'], data[alg][0]['communication'])])
     
-    axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration')
-    axes[row, 0].set_xlabel('Average Vertex Degree')
-    axes[row, 0].set_ylabel('Running Time (seconds)')
-    axes[row, 0].legend()
+    axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration', fontsize=14)
+    axes[row, 0].set_xlabel('Average Vertex Degree', fontsize=12)
+    axes[row, 0].set_ylabel('Running Time (s)', fontsize=12)
+    axes[row, 0].legend(fontsize=11)
+    axes[row, 0].tick_params(axis='both', which='major', labelsize=12)
     
-    axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication')
-    axes[row, 1].set_xlabel('Average Vertex Degree')
-    axes[row, 1].set_ylabel('Per-party Comm (GB)')
-    axes[row, 1].legend()
+    axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication', fontsize=14)
+    axes[row, 1].set_xlabel('Average Vertex Degree', fontsize=12)
+    axes[row, 1].set_ylabel('Per-party Comm (GB)', fontsize=12)
+    axes[row, 1].legend(fontsize=11)
+    axes[row, 1].tick_params(axis='both', which='major', labelsize=12)
 
 plt.tight_layout()
 plt.savefig("fig/efficiency_average_degree.pdf")
