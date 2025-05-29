@@ -15,6 +15,12 @@ int main(int argc, char** argv)
 	int alg = std::atoi(argv[7]);
 	int iterations = std::atoi(argv[8]);
 
+    #ifdef REMOVE_OGA
+        printf("OGA DISABLED\n");
+    #else
+        printf("OGA ENABLED\n");
+    #endif	
+
 	if (scheme == 0) {
 		eval_ours(num_parts, party_id, scale, avgDegree, interRatio, alg, iterations);
 	} else if (scheme == 1) {

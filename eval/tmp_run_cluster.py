@@ -285,182 +285,6 @@ def set_root_paths(application):
     preprocess_root_path = f"./preprocess/"
     comm_root_path = f"./{str(application)}/comm/"
 
-# Evaluate the accuracy of CoGNN-Opt for the three datasets and for different numbers of parties. Trained for 90 epochs under each setting. 
-# Note that, every 6 iterations correspond to 1 epoch of CoGNN-Opt, where the former 2 (GAS) iterations are in a forward pass and the latter 4 iterations are in a backward pass. 
-def eval_cognn_opt_accuracy():
-    global doPreprocess, iterations
-    set_root_paths("mp-accuracy")
-    doPreprocess = True
-    iterations = 540
-    list_num_parts = [2,3,4,5]
-    for cur_num_parts in list_num_parts:
-        run_gcn_test("gcn-optimize", "cora", cur_num_parts)
-        run_gcn_test("gcn-optimize", "citeseer", cur_num_parts)
-        run_gcn_test("gcn-optimize", "pubmed", cur_num_parts)
-
-def eval_cognn_opt_accuracy_no_preprocess():
-    global doPreprocess, iterations
-    set_root_paths("mp-accuracy")
-    doPreprocess = False
-    iterations = 540
-    list_num_parts = [2]
-    for cur_num_parts in list_num_parts:
-        run_gcn_test("gcn-optimize", "cora", cur_num_parts)
-        run_gcn_test("gcn-optimize", "citeseer", cur_num_parts)
-        run_gcn_test("gcn-optimize", "pubmed", cur_num_parts)
-
-# Evaluate the efficiency of CoGNN (under the efficiency setting for full graph computation) for the three datasets and for 2 parties. Trained for 1 epoch under each setting. 
-# Note that, every 4 iterations correspond to 1 epoch of CoGNN, where the former 2 (GAS) iterations are in a forward pass and the latter 2 iterations are in a backward pass. 
-def eval_cognn_unopt_accuracy():
-    global doPreprocess, iterations
-    set_root_paths("mp-accuracy")
-    doPreprocess = True
-    iterations = 4
-    list_num_parts = [2]
-    for cur_num_parts in list_num_parts:
-        run_gcn_test("gcn-original", "cora", cur_num_parts)
-        run_gcn_test("gcn-original", "citeseer", cur_num_parts)
-        run_gcn_test("gcn-original", "pubmed", cur_num_parts)
-
-def eval_cognn_unopt_accuracy_no_preprocess():
-    global doPreprocess, iterations
-    set_root_paths("mp-accuracy")
-    doPreprocess = False
-    iterations = 4
-    list_num_parts = [2]
-    for cur_num_parts in list_num_parts:
-        run_gcn_test("gcn-original", "cora", cur_num_parts)
-        run_gcn_test("gcn-original", "citeseer", cur_num_parts)
-        run_gcn_test("gcn-original", "pubmed", cur_num_parts)
-
-def eval_fedgnn_accuracy():
-    set_root_paths("mp-accuracy")
-    list_num_parts = [2,3,4,5]
-    list_datasets = ["cora", "citeseer", "pubmed"]
-    log_path = log_root_path
-    my_makedir(log_path)
-    processList = []
-    for dataset in list_datasets:
-        for cur_num_parts in list_num_parts:
-            executable_path = "/work/Art/build/bin/test-fed-gcn"
-            cmd = [executable_path, str(dataset), str(cur_num_parts)]
-            print(" ".join(cmd))
-            log_f = open(log_path+"fed-gcn."+dataset+"."+str(cur_num_parts)+"p.log", 'w', encoding='utf-8')
-            processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
-
-def eval_plaintextgnn_accuracy():
-    set_root_paths("mp-accuracy")
-    list_datasets = ["cora", "citeseer", "pubmed"]
-    log_path = log_root_path
-    my_makedir(log_path)
-    processList = []
-    for dataset in list_datasets:
-        executable_path = "/work/Art/build/bin/test-plaintext-gcn"
-        cmd = [executable_path, str(dataset)]
-        print(" ".join(cmd))
-        log_f = open(log_path+"plaintext-gcn."+dataset+".log", 'w', encoding='utf-8')
-        processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
- 
-# Evaluate the training efficiency of GraphSC for the three datasets and for different numbers of parties. Trained for 1 epoch under each setting. 
-# Note that, every 4 iterations correspond to 1 epoch of GraphSC, where the former 2 (GAS) iterations are in a forward pass and the latter 2 iterations are in a backward pass. 
-def eval_graphsc_efficiency():
-    global iterations, doPreprocess
-    set_root_paths("graphsc")
-    list_datasets = ["cora", "citeseer", "pubmed"]
-    list_scalers = [2, 3, 4, 5]
-    doPreprocess = True
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_graphsc("test-graphsc", dataset, cur_scaler)
-
-    list_scalers = [2, 3, 4, 5]
-    doPreprocess = False
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_graphsc("test-graphsc", dataset, cur_scaler)
-    
-# Evaluate the training efficiency of CoGNN-Opt for the three datasets and for different numbers of parties. Trained for 1 epoch under each setting. 
-# Note that, every 6 iterations correspond to 1 epoch of CoGNN-Opt, where the former 2 (GAS) iterations are in a forward pass and the latter 4 iterations are in a backward pass. 
-def eval_cognn_opt_efficiency():
-    global iterations, doPreprocess
-    list_scalers = [2, 3, 4, 5]
-    iterations = 6
-    list_datasets = ["cora", "citeseer", "pubmed"]
-
-    set_root_paths("cognn-scale")
-    doPreprocess = True
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_cognn_scaler("gcn-optimize", dataset, cur_scaler)
-
-    doPreprocess = False
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_cognn_scaler("gcn-optimize", dataset, cur_scaler)
-
-# Evaluate the training efficiency of CoGNN for the three datasets and for different numbers of parties. Trained for 1 epoch under each setting. 
-# Note that, every 4 iterations correspond to 1 epoch of CoGNN, where the former 2 (GAS) iterations are in a forward pass and the latter 2 iterations are in a backward pass.
-def eval_cognn_unopt_efficiency():
-    global iterations, doPreprocess
-    list_scalers = [2, 3, 4, 5]
-    iterations = 4
-    list_datasets = ["cora", "citeseer", "pubmed"]
-
-    set_root_paths("cognn-scale")
-    doPreprocess = True
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_cognn_scaler("gcn-original", dataset, cur_scaler)
-
-    doPreprocess = False
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_cognn_scaler("gcn-original", dataset, cur_scaler)
-
-# Evaluate the inference efficiency of CoGNN-Opt for the three datasets and for 2 parties. Full-graph inference for 1 time under each setting. 
-# Note that, every 2 iterations correspond to 1 inference of CoGNN-Opt.
-def eval_cognn_opt_inference_efficiency():
-    global iterations, doPreprocess
-    set_root_paths("inference")
-
-    list_num_parts = [2]
-    list_datasets = ["cora", "citeseer", "pubmed"]
-    iterations = 2
-
-    doPreprocess = True
-    for cur_num_parts in list_num_parts:
-        for cur_dataset in list_datasets:
-            run_gcn_test("gcn-inference-optimize", cur_dataset, cur_num_parts)
-
-    doPreprocess = False
-    for cur_num_parts in list_num_parts:
-        for cur_dataset in list_datasets:
-            run_gcn_test("gcn-inference-optimize", cur_dataset, cur_num_parts)
-
-# Evaluate the inference efficiency of CoGNN for the three datasets and for 2 parties. Full-graph inference for 1 time under each setting. 
-# Note that, every 2 iterations correspond to 1 inference of CoGNN.
-def eval_cognn_unopt_inference_efficiency():
-    global iterations, doPreprocess
-    set_root_paths("inference")
-
-    list_num_parts = [2]
-    list_datasets = ["cora", "citeseer", "pubmed"]
-    iterations = 2
-
-    doPreprocess = True
-    for cur_num_parts in list_num_parts:
-        for cur_dataset in list_datasets:
-            run_gcn_test("gcn-original", cur_dataset, cur_num_parts)
-
-    doPreprocess = False
-    for cur_num_parts in list_num_parts:
-        for cur_dataset in list_datasets:
-            run_gcn_test("gcn-original", cur_dataset, cur_num_parts)
-
 # The smallest training test corresponds to one specific evaluation setting in our efficiency test, i.e., 2-party training, Cora dataset, 2 epochs with preprocessing.
 def smallest_eval_cognn_efficiency():
     global iterations, doPreprocess
@@ -536,6 +360,33 @@ def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, 
     my_makedir(log_path)
 
     executable_path = executable_root_path + "./out/build/linux/eval/eval"
+    processList = []
+    start_io = commMeaStart()
+    for i in range(num_parts):
+        cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
+        cmd += ["taskset", "--cpu-list"]
+        cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
+        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(avgDegree), str(interRatio), str(alg), str(iterations)]
+        print(" ".join(cmd))
+        log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
+        processList.append(subprocess.Popen(cmd, stdout=log_f))
+    for process in processList:
+        process.wait()
+    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale)  + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(comm_log_path)
+    commMeaEnd(start_io, comm_log_path + "comm")
+    processList = []
+
+def run_graph_processing_with_limited_cores_remove_oga(scheme, net_cond, num_parts, scale, avgDegree, interRatio, alg, iterations):
+    cur_bandwidth = net_cond[0]
+    cur_latency = net_cond[1]
+    if isCluster:
+        setup_network(cur_bandwidth, cur_latency)
+
+    log_path = log_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+    my_makedir(log_path)
+
+    executable_path = executable_root_path + "./out/build/linux/eval/eval-remove-oga"
     processList = []
     start_io = commMeaStart()
     for i in range(num_parts):
@@ -636,7 +487,7 @@ def eval_efficiency():
     # list_net_conds = [(400, 1)]
     # list_num_parts = [6, 7, 8, 9, 10]
     list_num_parts = [3, 4, 5]
-    list_scales = [16] # 2 ^ n
+    list_scales = [10] # 2 ^ n
     list_avgDegrees = [3]
     list_interRatios = [0.4]
     # list_scales = [16] # 2 ^ n
@@ -651,6 +502,35 @@ def eval_efficiency():
                         for cur_interRario in list_interRatios:
                             for cur_alg in list_algs:
                                 run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
+
+def eval_efficiency_remove_oga():
+    global iterations
+    global isCluster
+    isCluster = True
+    set_root_paths("remove-oga")
+
+    print("##<------------>##")
+
+    list_schemes = [0] # 0 for Ours
+    list_net_conds = [(4000, 1), (200, 10)]
+    # list_net_conds = [(400, 1)]
+    # list_num_parts = [6, 7, 8, 9, 10]
+    list_num_parts = [3, 4, 5]
+    list_scales = [10] # 2 ^ n
+    list_avgDegrees = [3]
+    list_interRatios = [0.4]
+    # list_scales = [16] # 2 ^ n
+    list_algs = [0, 1, 2] # 0 for CC
+    iterations = 5
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRario in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores_remove_oga(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRario, cur_alg, iterations)
 
 def eval_vertex_degree():
     global iterations
@@ -763,20 +643,10 @@ def eval_prior_non_e2e():
 
 # Define the main function to parse command line arguments and call the appropriate functions
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate CoGNN and GraphSC models.')
-    parser.add_argument('--cognn-opt-accuracy', action='store_true', help='Evaluate CoGNN-Opt accuracy')
-    parser.add_argument('--cognn-opt-accuracy-no-preprocess', action='store_true', help='Evaluate CoGNN-Opt accuracy, without preprocessing')
-    parser.add_argument('--cognn-unopt-accuracy', action='store_true', help='Evaluate CoGNN unoptimized efficiency under the accuracy setting')
-    parser.add_argument('--cognn-unopt-accuracy-no-preprocess', action='store_true', help='Evaluate CoGNN unoptimized efficiency under the accuracy setting, without preprocessing')
-    parser.add_argument('--fedgnn-accuracy', action='store_true', help='Evaluate FL-based GNN accuracy')
-    parser.add_argument('--plaintextgnn-accuracy', action='store_true', help='Evaluate Plaintext GNN accuracy')
-    parser.add_argument('--graphsc-efficiency', action='store_true', help='Evaluate GraphSC efficiency')
-    parser.add_argument('--cognn-opt-efficiency', action='store_true', help='Evaluate CoGNN-Opt efficiency')
-    parser.add_argument('--cognn-unopt-efficiency', action='store_true', help='Evaluate CoGNN unoptimized efficiency')
-    parser.add_argument('--cognn-opt-inference', action='store_true', help='Evaluate CoGNN-Opt inference efficiency')
-    parser.add_argument('--cognn-unopt-inference', action='store_true', help='Evaluate CoGNN unoptimized inference efficiency')
+    parser = argparse.ArgumentParser(description='Evaluate RingSG, CoGNN and GraphSC for various collaborative graph processing tasks.')
     parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
-    parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales (number of parties?)')
+    parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees.')
+    parser.add_argument('--efficiency-remove-oga', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees. (Remove OGA)')
     parser.add_argument('--vertex-degree', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
     parser.add_argument('--three-pc-cmp', action='store_true', help='Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion.')
     parser.add_argument('--app', action='store_true', help='Evaluate Application')
@@ -784,32 +654,12 @@ def main():
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
     args = parser.parse_args()
 
-    if args.cognn_opt_accuracy:
-        eval_cognn_opt_accuracy()
-    if args.cognn_opt_accuracy_no_preprocess:
-        eval_cognn_opt_accuracy_no_preprocess()
-    if args.cognn_unopt_accuracy:
-        eval_cognn_unopt_accuracy()
-    if args.cognn_unopt_accuracy_no_preprocess:
-        eval_cognn_unopt_accuracy_no_preprocess()
-    if args.fedgnn_accuracy:
-        eval_fedgnn_accuracy()
-    if args.plaintextgnn_accuracy:
-        eval_plaintextgnn_accuracy()
-    if args.graphsc_efficiency:
-        eval_graphsc_efficiency()
-    if args.cognn_opt_efficiency:
-        eval_cognn_opt_efficiency()
-    if args.cognn_unopt_efficiency:
-        eval_cognn_unopt_efficiency()
-    if args.cognn_opt_inference:
-        eval_cognn_opt_inference_efficiency()
-    if args.cognn_unopt_inference:
-        eval_cognn_unopt_inference_efficiency()
     if args.smallest_cognn_efficiency:
         smallest_eval_cognn_efficiency()
     if args.efficiency:
         eval_efficiency()
+    if args.efficiency_remove_oga:
+        eval_efficiency_remove_oga()
     if args.vertex_degree:
         eval_vertex_degree()
     if args.three_pc_cmp:
@@ -819,17 +669,7 @@ def main():
     if args.prior_non_e2e:
         eval_prior_non_e2e()
     if args.all:
-        eval_cognn_opt_accuracy()
-        eval_cognn_opt_accuracy_no_preprocess()
-        eval_cognn_unopt_accuracy()
-        eval_cognn_unopt_accuracy_no_preprocess()
-        eval_fedgnn_accuracy()
-        eval_plaintextgnn_accuracy()
-        eval_graphsc_efficiency()
-        eval_cognn_opt_efficiency()
-        eval_cognn_unopt_efficiency()
-        eval_cognn_opt_inference_efficiency()
-        eval_cognn_unopt_inference_efficiency()
+        pass
 
 if __name__ == "__main__":
     main()

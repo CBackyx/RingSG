@@ -9,3 +9,16 @@ target_link_libraries(eval com-psi_Tests)
 target_link_libraries(eval aby3_Tests)
 target_link_libraries(eval aby3-graph_Tests)
 target_link_libraries(eval oc::tests_cryptoTools)
+
+file(GLOB_RECURSE SRC_EVAL_REMOVE_OGA ${CMAKE_SOURCE_DIR}/eval/*.cpp)
+add_executable(eval-remove-oga ${SRC_EVAL_REMOVE_OGA})
+
+target_compile_definitions(eval-remove-oga PUBLIC REMOVE_OGA)
+target_include_directories(eval-remove-oga PUBLIC ${CMAKE_SOURCE_DIR}/eval/)
+
+target_link_libraries(eval-remove-oga com-psi)
+target_link_libraries(eval-remove-oga aby3-ML)
+target_link_libraries(eval-remove-oga com-psi_Tests)
+target_link_libraries(eval-remove-oga aby3_Tests) 
+target_link_libraries(eval-remove-oga aby3-graph_Tests-remove-oga)
+target_link_libraries(eval-remove-oga oc::tests_cryptoTools)

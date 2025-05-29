@@ -171,6 +171,10 @@ void our_gather(
         exit(-1);
     }    
     // orCir->levelByAndDepth();    
+
+#ifdef REMOVE_OGA
+    aggedUpdateShare_int = unaggedUpdateShare_int;
+#else
     run_OGA(
         prevChl,
         nextChl,
@@ -181,6 +185,8 @@ void our_gather(
         mergeCir,
         false
     );
+#endif
+
     Matrix<u8> aggedUpdateShare(updateShare.rows(), byteSize);
     intMat2ByteMat(
         aggedUpdateShare_int,
@@ -305,6 +311,10 @@ void our_extract(
         byteMat2intMat(orderedShare_byte, orderedShare_int);
         auto mergeCir = lib.int_int_bitwiseOr(64, 64, 64);
         std::vector<u64> aggTag = vertexTag; // This is mocked
+
+#ifdef REMOVE_OGA
+        outputShare = orderedShare_int;
+#else
         run_OGA(
             prevChl,
             nextChl,
@@ -315,6 +325,8 @@ void our_extract(
             mergeCir,
             false
         );
+#endif
+
     } else if (alg == Alg::SP) {
         // Merge the Connected labels  
         i64Matrix labelReversed(inputShare.rows(), inputShare.cols());
