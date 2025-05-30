@@ -1,9 +1,16 @@
 import os
 import re
 import matplotlib.pyplot as plt
+import argparse
+
+isSmallest = False
+parser = argparse.ArgumentParser()
+parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
+args = parser.parse_args()
+isSmallest = args.smallest
 
 # Define the base directory for the log files
-base_dir = './../efficiency/log'
+base_dir = './../log/efficiency-num-parties/log'
 
 markerList = ['P', '^', 'd', '*']
 
@@ -16,6 +23,10 @@ list_scheme_formal_names = ["RingSG", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [3, 4, 5, 6, 7, 8, 9, 10]
 list_scales = [16] # 2 ^ n
+list_scale_names = ["$2^{21}$"]
+if isSmallest:
+    list_scales = [10]
+    list_scale_names = ["$2^{15}$"]
 # list_scale_names = ["$2^{10}$", "$2^{12}$", "$2^{15}$", "$2^{16}$"]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]

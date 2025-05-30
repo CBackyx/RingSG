@@ -1,9 +1,16 @@
 import os
 import re
 import matplotlib.pyplot as plt
+import argparse
+
+isSmallest = False
+parser = argparse.ArgumentParser()
+parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
+args = parser.parse_args()
+isSmallest = args.smallest
 
 # Define the base directory for the log files
-base_dir = './../vertex-degree/log'
+base_dir = './../log/efficiency-vertex-degrees/log'
 
 markerList = ['P', '^', 'd', '*']
 
@@ -16,6 +23,10 @@ list_scheme_formal_names = ["RingSG", "CoGNN", "GraphSC"]
 list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [8]
 list_scales = [16] # 2 ^ n
+list_scale_names = ["$2^{21}$"]
+if isSmallest:
+    list_scales = [10]
+    list_scale_names = ["$2^{15}$"]
 list_average_degrees = [2, 3, 4, 5, 6, 7, 8, 9, 10]
 list_inter_ratios = [0.4]
 # list_scale_names = ["$2^{10}$", "$2^{12}$", "$2^{15}$", "$2^{16}$"]

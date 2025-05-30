@@ -28,6 +28,8 @@ defaultScaler = 0.2
 bandwidthList = [200, 400, 1000, 4000]
 latencyList = [0.15, 1, 10, 20]
 
+isSmallest = False
+
 def my_makedir(path):
     if not os.path.isdir(path):
         os.makedirs(path)
@@ -129,174 +131,13 @@ def commMeaEnd(io, comm_file_path=""):
     with open(comm_file_path, "w", encoding='utf-8') as ofile:
         ofile.write(df.to_string())
 
-def run_gcn_test(executable = "gcn-ss", dataset = "cora", numParts = 2):
-    dataset_upper_case = dataset[:1].upper() + dataset[1:]
-    cur_bandwidth = 4000
-    cur_latency = defaultLatency
-    if isCluster:
-        setup_network(cur_bandwidth, cur_latency)
-    # Evaluation root setting
-    data_path = data_root_path + "gcn_test/"
-    delete_and_create_dir(ferret_ot_data_root_path)
-    result_path = result_root_path + executable + "/" + dataset + "/" + str(numParts) + "p/"
-    if doPreprocess:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(numParts) + "p/"
-    else:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(numParts) + "p/" + "noPreprocess/"
-    my_makedir(result_path)
-    my_makedir(log_path)
-    preprocess_path = preprocess_root_path + executable + "/" + dataset + "/" + str(numParts) + "p/"
-    my_makedir(preprocess_path)
-    
-    preprocess_setting = executable + "/" + dataset + "/" + str(numParts) + "p"
-    executable_path = executable_root_path + executable
-    processList = []
-    start_io = commStart()
-    for i in range(numParts):
-        cmd = []
-        if isCluster:
-            cmd = ["ip", "netns", "exec", nsList[i]]
-        cmd += [executable_path, "-t", str(numParts), "-g", str(numParts), "-i", str(i), "-m", str(iterations), "-p", "1", "-s", preprocess_setting]
-        if not doPreprocess:
-            cmd += ["-n", "1"]
-        if isCluster:
-            cmd += ["-c", "1"]
-        cmd += ["-r", "1"]
-
-        cmd += [f"./data/{dataset_upper_case}/transformed/" + dataset + ".edge.preprocessed", 
-                f"./data/{dataset_upper_case}/transformed/" + dataset + ".vertex.preprocessed",
-                f"./data/{dataset_upper_case}/transformed/" + dataset + ".part.preprocessed." + str(numParts) + "p", 
-                result_path + "gcn_test"+"_"+str(i)+".result." + dataset,
-                f"./data/{dataset_upper_case}/transformed/" + dataset + "_config.txt"]
-
-        print(" ".join(cmd))
-        log_f = open(log_path+"gcn_test"+"_"+dataset+"_"+str(i)+".log", 'w', encoding='utf-8')
-        processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
-    commEnd(start_io, doPreprocess, 1, str("_") + executable + "_" + dataset + "_" + str(numParts) + "p")
-    processList = []
-
-def run_graphsc(executable = "test-graphsc", dataset = "cora", scaler = 2):
-    dataset_upper_case = dataset[:1].upper() + dataset[1:]
-    cur_bandwidth = 4000
-    cur_latency = defaultLatency
-
-    if isCluster:
-        setup_network(cur_bandwidth, cur_latency)
-    # Evaluation root setting
-    delete_and_create_dir(ferret_ot_data_root_path)
-    result_path = result_root_path + executable + "/" + dataset + "/" + str(scaler) + "s/"
-    if doPreprocess:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(scaler) + "s/"
-    else:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(scaler) + "s/" + "noPreprocess/"
-    my_makedir(result_path)
-    my_makedir(log_path)
-    preprocess_path = preprocess_root_path + executable + "/" + dataset + "/" + str(scaler) + "s/"
-    my_makedir(preprocess_path)
-    
-    preprocess_setting = executable + "/" + dataset + "/" + str(scaler) + "s"
-    executable_path = executable_root_path + executable
-    processList = []
-    start_io = commStart()
-    numParties = 2
-    epochs = 1
-    for i in range(numParties):
-        cmd = []
-        if isCluster:
-            cmd = ["ip", "netns", "exec", nsList[i]]
-        # partyId GNNConfigFile v_path e_path setting n_epochs do_prep is_cluster
-        cmd += [executable_path, \
-                str(i), \
-                f"./data/{dataset_upper_case}/transformed/{scaler}s/" + dataset + "_config.txt", \
-                f"./data/{dataset_upper_case}/transformed/{scaler}s/" + dataset + ".vertex.preprocessed", \
-                f"./data/{dataset_upper_case}/transformed/{scaler}s/" + dataset + ".edge.preprocessed", \
-                preprocess_setting, \
-                str(epochs), \
-                str(1) if doPreprocess else str(0), \
-                str(1) if isCluster else str(0)]
-        print(" ".join(cmd))
-        # continue
-        log_f = open(log_path+"gcn_test"+"_"+dataset+"_"+str(i)+".log", 'w', encoding='utf-8')
-        processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
-    commEnd(start_io, doPreprocess, 1, str("_") + executable + "_" + dataset + "_" + str(scaler) + "s")
-    processList = []
-
-def run_cognn_scaler(executable = "gcn-ss", dataset = "cora", numParts = 2):
-    dataset_upper_case = dataset[:1].upper() + dataset[1:]
-    cur_bandwidth = 4000
-    cur_latency = defaultLatency
-    if isCluster:
-        setup_network(cur_bandwidth, cur_latency)
-    # Evaluation root setting
-    data_path = data_root_path + "gcn_test/"
-    delete_and_create_dir(ferret_ot_data_root_path)
-    result_path = result_root_path + executable + "/" + dataset + "/" + str(numParts) + "s/"
-    if doPreprocess:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(numParts) + "s/"
-    else:
-        log_path = log_root_path + executable + "/" + dataset + "/" + str(numParts) + "s/" + "noPreprocess/"
-    my_makedir(result_path)
-    my_makedir(log_path)
-    preprocess_path = preprocess_root_path + executable + "/" + dataset + "/" + str(numParts) + "s/"
-    my_makedir(preprocess_path)
-    
-    preprocess_setting = executable + "/" + dataset + "/" + str(numParts) + "s"
-    executable_path = executable_root_path + executable
-    processList = []
-    start_io = commStart()
-    for i in range(numParts):
-        cmd = []
-        if isCluster:
-            cmd = ["ip", "netns", "exec", nsList[i]]
-        cmd += [executable_path, "-t", str(numParts), "-g", str(numParts), "-i", str(i), "-m", str(iterations), "-p", "1", "-s", preprocess_setting]
-        if not doPreprocess:
-            cmd += ["-n", "1"]
-        if isCluster:
-            cmd += ["-c", "1"]
-        cmd += ["-r", "1"]
-        cmd += [f"./data/{dataset_upper_case}/transformed/{numParts}s/" + dataset + ".edge.preprocessed", 
-                f"./data/{dataset_upper_case}/transformed/{numParts}s/" + dataset + ".vertex.preprocessed",
-                f"./data/{dataset_upper_case}/transformed/{numParts}s/" + dataset + ".part.preprocessed",
-                result_path + "gcn_test"+"_"+str(i)+".result." + dataset,
-                f"./data/{dataset_upper_case}/transformed/{numParts}s/" + dataset + "_config.txt"]
-        print(" ".join(cmd))
-        log_f = open(log_path+"gcn_test"+"_"+dataset+"_"+str(i)+".log", 'w', encoding='utf-8')
-        processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
-    commEnd(start_io, doPreprocess, 1, str("_") + executable + "_" + dataset + "_" + str(numParts) + "p")
-    processList = []
-
 def set_root_paths(application):
     global executable_root_path, data_root_path, ferret_ot_data_root_path, result_root_path, log_root_path, config_root_path, preprocess_root_path, comm_root_path
-    if application == "cognn-scale":
-        executable_root_path = f"./../../bin/"
-    elif application == "graphsc":
-        executable_root_path = f"./../../build/bin/"
     data_root_path = f"./{str(application)}/data/"
-    # ferret_ot_data_root_path = f"./{str(application)}/ot-data/"
     result_root_path = f"./{str(application)}/result/"
     log_root_path = f"./{str(application)}/log/"
     config_root_path = "./config/"
-    preprocess_root_path = f"./preprocess/"
     comm_root_path = f"./{str(application)}/comm/"
-
-# The smallest training test corresponds to one specific evaluation setting in our efficiency test, i.e., 2-party training, Cora dataset, 2 epochs with preprocessing.
-def smallest_eval_cognn_efficiency():
-    global iterations, doPreprocess
-    list_scalers = [2]
-    iterations = 12
-    list_datasets = ["cora"]
-
-    set_root_paths("cognn-smallest")
-    doPreprocess = True
-    for dataset in list_datasets:
-        for cur_scaler in list_scalers:
-            run_cognn_scaler("gcn-optimize", dataset, cur_scaler)
 
 def run_graph_processing(scheme, net_cond, num_parts, scale, alg, iterations):
     cur_bandwidth = net_cond[0]
@@ -350,32 +191,48 @@ def run_graph_processing_with_limited_cores_for_avgDegree(scheme, net_cond, num_
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
 
-def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, avgDegree, interRatio, alg, iterations, ablation_tag=''):
-    cur_bandwidth = net_cond[0]
-    cur_latency = net_cond[1]
-    if isCluster:
-        setup_network(cur_bandwidth, cur_latency)
+def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, avgDegree, interRatio, alg, iterations, ablation_tag='', max_retries=3):
+    
+    for attempt in range(max_retries):
+        cur_bandwidth = net_cond[0]
+        cur_latency = net_cond[1]
+        if isCluster:
+            setup_network(cur_bandwidth, cur_latency)
 
-    log_path = log_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
-    my_makedir(log_path)
+        log_path = log_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale) + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+        my_makedir(log_path)
 
-    executable_path = executable_root_path + "./out/build/linux/eval/eval" + ablation_tag
-    processList = []
-    start_io = commMeaStart()
-    for i in range(num_parts):
-        cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
-        cmd += ["taskset", "--cpu-list"]
-        cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
-        cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(avgDegree), str(interRatio), str(alg), str(iterations)]
-        print(" ".join(cmd))
-        log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
-        processList.append(subprocess.Popen(cmd, stdout=log_f))
-    for process in processList:
-        process.wait()
-    comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale)  + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
-    my_makedir(comm_log_path)
-    commMeaEnd(start_io, comm_log_path + "comm")
-    processList = []
+        executable_path = executable_root_path + "./out/build/linux/eval/eval" + ablation_tag
+        processList = []
+        start_io = commMeaStart()
+        for i in range(num_parts):
+            cmd = ["sudo", "ip", "netns", "exec", nsList[i]]
+            cmd += ["taskset", "--cpu-list"]
+            cmd += [str(i * 3) + "-" + str((i + 1) * 3 - 1)]
+            cmd += [executable_path, str(scheme), str(num_parts), str(i), str(scale), str(avgDegree), str(interRatio), str(alg), str(iterations)]
+            print(" ".join(cmd))
+            log_f = open(log_path+"efficiency_"+str(i)+".log", 'w', encoding='utf-8')
+            processList.append(subprocess.Popen(cmd, stdout=log_f))
+        all_success = True
+        for process in processList:
+            process.wait()
+            if process.returncode != 0:
+                all_success = False
+                print(f"Process {process} failed with return code {process.returncode}")
+        
+        if all_success:
+            comm_log_path = comm_root_path + "executable_" + str(scheme) + "/net_cond_" + str(net_cond[0]) + "_" + str(net_cond[1]) + "/num_parts_" + str(num_parts) + "/scale_" + str(scale)  + "/alg_" + str(alg) + "/iters_" + str(iterations) + "/"
+            my_makedir(comm_log_path)
+            commMeaEnd(start_io, comm_log_path + "comm")
+            processList = []
+            print(f"SUCCESS")
+            return
+        else:
+            print(f"Retrying in 3 seconds...")
+            time.sleep(3)
+
+    print(f"Max retries ({max_retries}) exceeded. Giving up.")
+    return False
 
 def run_graph_processing_debug(scheme, net_cond, num_parts, scale, alg, iterations):
     cur_bandwidth = net_cond[0]
@@ -404,68 +261,116 @@ def run_graph_processing_debug(scheme, net_cond, num_parts, scale, alg, iteratio
     commMeaEnd(start_io, comm_log_path + "comm")
     processList = []
 
-# def eval_efficiency():
-#     global iterations
-#     global isCluster
-#     isCluster = True
-#     # set_root_paths("remove-oga")
-#     set_root_paths("efficiency")
+def eval_efficiency_scales():
+    global iterations
+    global isCluster
+    global isSmallest
 
-#     print("##<------------>##")
+    isCluster = True
+    set_root_paths("log/efficiency-scales")
 
-#     list_schemes = [0, 1, 2] # 0 for Ours
-#     list_net_conds = [(4000, 1), (200, 10)]
-#     # list_num_parts = [6, 7, 8, 9, 10]
-#     list_num_parts = [8]
-#     list_scales = [12, 13, 14, 15, 16] # 2 ^ n
-#     # list_scales = [16] # 2 ^ n
-#     list_algs = [0, 1, 2] # 0 for CC
-#     iterations = 5
+    print("##<------------>##")
 
-#     for cur_scheme in list_schemes:
-#         for cur_net_cond in list_net_conds:
-#             for cur_num_parts  in list_num_parts:
-#                 for cur_scale in list_scales:
-#                     for cur_alg in list_algs:
-#                         run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+    list_schemes = [0, 1, 2] # 0 for Ours, 1 for CoGNN, 2 for GraphSC
+    list_net_conds = [(4000, 1)]
+    list_num_parts = [8]
+    list_scales = range(12, 17)
+    if isSmallest:
+        list_scales = range(7, 12)    
+    list_avgDegrees = [3]
+    list_interRatios = [0.4]
+    list_algs = [0, 1, 2] # 0 for CC, 1 for SP, 2 for PR
+    iterations = 5
 
-#     print("##<-----num part------->##")
-#     list_schemes = [0, 1, 2] # 0 for Ours
-#     list_net_conds = [(4000, 1), (200, 10)]
-#     list_num_parts = [6, 7, 9, 10]
-#     # list_num_parts = [8]
-#     # list_scales = [12, 13, 14, 15, 16] # 2 ^ n
-#     list_scales = [16] # 2 ^ n
-#     list_algs = [0, 1, 2] # 0 for CC
-#     iterations = 5
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRatio in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
 
-#     for cur_scheme in list_schemes:
-#         for cur_net_cond in list_net_conds:
-#             for cur_num_parts  in list_num_parts:
-#                 for cur_scale in list_scales:
-#                     for cur_alg in list_algs:
-#                         run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_alg, iterations)
+def eval_efficiency_num_parties():
+    global iterations
+    global isCluster
+    global isSmallest
+
+    isCluster = True
+    set_root_paths("log/efficiency-num-parties")
+
+    print("##<------------>##")
+
+    list_schemes = [0, 1, 2]
+    list_net_conds = [(4000, 1)]
+    list_num_parts = range(3, 11)
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
+    list_avgDegrees = [3]
+    list_interRatios = [0.4]
+    list_algs = [0, 1, 2]
+    iterations = 5
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRatio in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
+
+def eval_efficiency_vertex_degrees():
+    global iterations
+    global isCluster
+    global isSmallest
+
+    isCluster = True
+    set_root_paths("log/vertex-degree")
+
+    print("##<------------>##")
+
+    list_schemes = [0, 1, 2]
+    list_net_conds = [(4000, 1)]
+    list_num_parts = [8]
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
+    list_avgDegrees = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    list_interRatios = [0.4]
+    list_algs = [0, 1, 2]
+    iterations = 5
+
+    for cur_scheme in list_schemes:
+        for cur_net_cond in list_net_conds:
+            for cur_num_parts  in list_num_parts:
+                for cur_scale in list_scales:
+                    for cur_avgDegree in list_avgDegrees:
+                        for cur_interRatio in list_interRatios:
+                            for cur_alg in list_algs:
+                                run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
 
 def eval_efficiency():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("efficiency")
+
+    set_root_paths("log/efficiency")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1, 2] # 0 for Ours
+    list_schemes = [0, 1, 2]
     list_net_conds = [(4000, 1), (200, 10)]
-    # list_net_conds = [(400, 1)]
-    # list_num_parts = [6, 7, 8, 9, 10]
-    # list_num_parts = [3, 4, 5]
     list_num_parts = [8]
-    list_scales = [10] # 2 ^ n
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
+    list_algs = [0, 1, 2]
     iterations = 5
 
     for cur_scheme in list_schemes:
@@ -480,22 +385,22 @@ def eval_efficiency():
 def eval_efficiency_remove_oga():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    set_root_paths("remove-oga")
+    set_root_paths("log/remove-oga")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1, 2] # 0 for Ours
+    list_schemes = [0, 1, 2]
     list_net_conds = [(4000, 1), (200, 10)]
-    # list_net_conds = [(400, 1)]
-    # list_num_parts = [6, 7, 8, 9, 10]
-    # list_num_parts = [3, 4, 5]
     list_num_parts = [8]
-    list_scales = [10] # 2 ^ n
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
+    list_algs = [0, 1, 2]
     iterations = 5
 
     for cur_scheme in list_schemes:
@@ -510,22 +415,22 @@ def eval_efficiency_remove_oga():
 def eval_efficiency_remove_oep():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    set_root_paths("remove-oep")
+    set_root_paths("log/remove-oep")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1, 2] # 0 for Ours
+    list_schemes = [0, 1, 2]
     list_net_conds = [(4000, 1), (200, 10)]
-    # list_net_conds = [(400, 1)]
-    # list_num_parts = [6, 7, 8, 9, 10]
-    # list_num_parts = [3, 4, 5]
     list_num_parts = [8]
-    list_scales = [10] # 2 ^ n
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
+    list_algs = [0, 1, 2]
     iterations = 5
 
     for cur_scheme in list_schemes:
@@ -537,57 +442,25 @@ def eval_efficiency_remove_oep():
                             for cur_alg in list_algs:
                                 run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations, ablation_tag='-remove-oep')
 
-def eval_vertex_degree():
-    global iterations
-    global isCluster
-    isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("vertex-degree")
-
-    print("##<------------>##")
-
-    list_schemes = [0, 1, 2] # 0 for Ours
-    # list_net_conds = [(4000, 1), (200, 10)]
-    list_net_conds = [(4000, 1)]
-    # list_net_conds = [(400, 1)]
-    # list_num_parts = [6, 7, 8, 9, 10]
-    list_num_parts = [8]
-    list_scales = [16] # 2 ^ n
-    list_avgDegrees = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-    list_interRatios = [0.4]
-    # list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
-    iterations = 5
-
-    for cur_scheme in list_schemes:
-        for cur_net_cond in list_net_conds:
-            for cur_num_parts  in list_num_parts:
-                for cur_scale in list_scales:
-                    for cur_avgDegree in list_avgDegrees:
-                        for cur_interRatio in list_interRatios:
-                            for cur_alg in list_algs:
-                                run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
-
 def eval_3pc_cmp():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("3pc-cmp")
+    set_root_paths("log/3pc-cmp")
 
     print("##<------------>##")
 
-    list_schemes = [0, 1, 2] # 0 for Ours
-    # list_net_conds = [(4000, 1), (200, 10)]
+    list_schemes = [0, 1, 2]
     list_net_conds = [(4000, 1)]
-    # list_net_conds = [(400, 1)]
-    # list_num_parts = [6, 7, 8, 9, 10]
     list_num_parts = [8]
-    list_scales = [10] # 2 ^ n
+    list_scales = [16]
+    if isSmallest:
+        list_scales = [10] 
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [16] # 2 ^ n
-    list_algs = [0, 1, 2] # 0 for CC
+    list_algs = [0, 1, 2]
     iterations = 20
 
     for cur_scheme in list_schemes:
@@ -597,25 +470,27 @@ def eval_3pc_cmp():
                     for cur_avgDegree in list_avgDegrees:
                         for cur_interRatio in list_interRatios:
                             for cur_alg in list_algs:
-                                run_graph_processing_with_limited_cores_for_avgDegree(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
+                                run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
 
 def eval_app():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("app")
+    set_root_paths("log/app")
 
     print("##<------------>##")
 
-    list_schemes = [3] # 4 for app
+    list_schemes = [3] # 3 for our app instantiation
     list_net_conds = [(4000, 1)]
     list_num_parts = [8]
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [19] # 2 ^ n
-    list_scales = [10]
-    list_algs = [0, 1] # 0 for CC
+    list_scales = [19]
+    if isSmallest:
+        list_scales = [10] 
+    list_algs = [0, 1] # 0 for Detect Group Connection, 1 for Trace Transfer Chain
     iterations = 10
 
     for cur_scheme in list_schemes:
@@ -630,20 +505,22 @@ def eval_app():
 def eval_prior_non_e2e():
     global iterations
     global isCluster
+    global isSmallest
+
     isCluster = True
-    # set_root_paths("remove-oga")
-    set_root_paths("prior-non-e2e")
+    set_root_paths("log/prior-non-e2e")
 
     print("##<------------>##")
 
-    list_schemes = [1, 2] # 4 for app
+    list_schemes = [1, 2] # 1 for CoGNN, 1 for GraphSC
     list_net_conds = [(4000, 1)]
     list_num_parts = [8]
     list_avgDegrees = [3]
     list_interRatios = [0.4]
-    # list_scales = [19] # 2 ^ n
-    list_scales = [10] # 2 ^ n
-    list_algs = [0, 1] # 0 for CC
+    list_scales = [19]
+    if isSmallest:
+        list_scales = [10] 
+    list_algs = [0, 1] # 0 for CC, 1 for SP
     iterations = 10
 
     for cur_scheme in list_schemes:
@@ -658,28 +535,37 @@ def eval_prior_non_e2e():
 
 # Define the main function to parse command line arguments and call the appropriate functions
 def main():
+
+    global isSmallest
+
     parser = argparse.ArgumentParser(description='Evaluate RingSG, CoGNN and GraphSC for various collaborative graph processing tasks.')
-    parser.add_argument('--smallest-cognn-efficiency', action='store_true', help='Evaluate smallest CoGNN efficiency')
+    parser.add_argument('--efficiency-scales', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales')
+    parser.add_argument('--efficiency-num-parties', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and numbers of parties')
+    parser.add_argument('--efficiency-vertex-degrees', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
     parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees.')
     parser.add_argument('--efficiency-remove-oga', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees. (Remove OGA)')
     parser.add_argument('--efficiency-remove-oep', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees. (Remove OEP)')
-    parser.add_argument('--vertex-degree', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
     parser.add_argument('--three-pc-cmp', action='store_true', help='Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion.')
     parser.add_argument('--app', action='store_true', help='Evaluate Application')
     parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e')
+    parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
     parser.add_argument('--all', action='store_true', help='Evaluate ALL')
     args = parser.parse_args()
 
-    if args.smallest_cognn_efficiency:
-        smallest_eval_cognn_efficiency()
+    isSmallest = args.smallest
+
+    if args.efficiency_scales:
+        eval_efficiency_scales()
+    if args.efficiency_num_parties:
+        eval_efficiency_num_parties()
+    if args.efficiency_vertex_degrees:
+        eval_efficiency_vertex_degrees()
     if args.efficiency:
         eval_efficiency()
     if args.efficiency_remove_oga:
         eval_efficiency_remove_oga()
     if args.efficiency_remove_oep:
         eval_efficiency_remove_oep()
-    if args.vertex_degree:
-        eval_vertex_degree()
     if args.three_pc_cmp:
         eval_3pc_cmp()
     if args.app:
@@ -687,7 +573,15 @@ def main():
     if args.prior_non_e2e:
         eval_prior_non_e2e()
     if args.all:
-        pass
+        # eval_efficiency_scales()
+        # eval_efficiency_num_parties()
+        eval_efficiency_vertex_degrees()
+        eval_efficiency()
+        eval_efficiency_remove_oga()
+        eval_efficiency_remove_oep()
+        eval_3pc_cmp()
+        eval_app()
+        eval_prior_non_e2e()
 
 if __name__ == "__main__":
     main()

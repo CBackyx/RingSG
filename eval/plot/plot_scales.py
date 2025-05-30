@@ -1,9 +1,16 @@
 import os
 import re
 import matplotlib.pyplot as plt
+import argparse
+
+isSmallest = False
+parser = argparse.ArgumentParser()
+parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
+args = parser.parse_args()
+isSmallest = args.smallest
 
 # Define the base directory for the log files
-base_dir = './../efficiency/log'
+base_dir = './../log/efficiency-scales/log'
 
 markerList = ['P', '^', 'd', '*']
 
@@ -17,6 +24,9 @@ list_net_conds = [(4000, 1), (200, 10)]
 list_num_parts = [8]
 list_scales = [12, 13, 14, 15, 16] # 2 ^ n
 list_scale_names = ["$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"]
+if isSmallest:
+    list_scales = range(7, 12) # 2 ^ n
+    list_scale_names = [f"$2^{x + 5}$" for x in list_scales]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5

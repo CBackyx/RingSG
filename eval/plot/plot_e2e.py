@@ -1,10 +1,17 @@
 import os
 import re
 import matplotlib.pyplot as plt
+import argparse
+
+isSmallest = False
+parser = argparse.ArgumentParser()
+parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
+args = parser.parse_args()
+isSmallest = args.smallest
 
 # Define the base directory for the log files
-app_base_dir = './../app/log'
-prior_non_e2e_base_dir = './../prior-non-e2e/log'
+app_base_dir = './../log/app/log'
+prior_non_e2e_base_dir = './../log/prior-non-e2e/log'
 
 markerList = ['P', '^', 'd', '*']
 
@@ -15,8 +22,13 @@ list_net_conds = [(4000, 1)]
 list_num_parts = [8]
 # list_scales = [12, 13, 14, 15, 16] # 2 ^ n
 # list_scale_names = ["$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"]
-list_scales = [10] # 2 ^ n
-list_scale_names = ["$2^{15}$"]
+
+list_scales = [19] # 2 ^ n
+list_scale_names = ["$2^{24}$"]
+if isSmallest:
+    list_scales = [10]
+    list_scale_names = ["$2^{15}$"]
+
 list_algs = [0, 1] # 0 for CC
 list_alg_names = ["CC", "SP"]
 iterations = 10
@@ -156,83 +168,3 @@ app_data_lan = {}
 parse_app_log(app_data_lan, list_net_conds[0])
 
 print(dict_to_markdown_table(app_data_lan))
-
-# print("RingSG App:")
-# print("----")
-# print(app_data_lan)
-# print("----")
-# print("OGA DISABLED:")
-# print("----")
-# print(no_oga_data)
-# print("----")
-# exit(-1)
-
-# def data_format_print_main_body(oga_data: dict, no_oga_data: dict):
-#     data_mat = []
-#     for alg in list_algs:
-#         data_mat.append([])
-#         for executable in list_schemes[:2]:
-#             if executable == 0:
-#                 data_mat[-1].append(oga_data[alg][executable]['Scatter duration'][0])
-#                 data_mat[-1].append(f"{oga_data[alg][executable]['Gather duration'][0]} ({oga_data[alg][executable]['Gather duration'][0] - no_oga_data[alg][executable]['Gather duration'][0]})")
-#                 data_mat[-1].append(oga_data[alg][executable]['duration'][0])
-#             else:
-#                 data_mat[-1].append(f"{oga_data[alg][executable]['Scatter duration'][0]} ({oga_data[alg][executable]['Scatter duration'][0] - no_oga_data[alg][executable]['Scatter duration'][0]})")
-#                 data_mat[-1].append(oga_data[alg][executable]['Gather duration'][0])
-#                 data_mat[-1].append(oga_data[alg][executable]['duration'][0])                
-
-#     data_table = generate_table_main_body(data_mat)
-#     return data_table
-
-# def data_format_print_appendix(oga_data: dict, no_oga_data: dict, no_oep_data: dict):
-#     data_mat = []
-#     for alg in list_algs:
-#         data_mat.append([])
-#         for executable in list_schemes[:2]:
-#             if executable == 0:
-#                 oep_du = oga_data[alg][executable]['Gather duration'][0] + oga_data[alg][executable]['Scatter duration'][0] - (no_oep_data[alg][executable]['Gather duration'][0] + no_oep_data[alg][executable]['Scatter duration'][0])
-#                 oga_du = oga_data[alg][executable]['Gather duration'][0] - no_oga_data[alg][executable]['Gather duration'][0]
-#                 other_du = oga_data[alg][executable]['Gather duration'][0] + oga_data[alg][executable]['Scatter duration'][0] - oep_du - oga_du
-#                 data_mat[-1] += [oep_du, oga_du, other_du, oga_data[alg][executable]['duration'][0]]
-#             else:
-#                 oep_du = oga_data[alg][executable]['Gather duration'][0] + oga_data[alg][executable]['Scatter duration'][0] - (no_oep_data[alg][executable]['Gather duration'][0] + no_oep_data[alg][executable]['Scatter duration'][0])
-#                 oga_du = oga_data[alg][executable]['Scatter duration'][0] - no_oga_data[alg][executable]['Scatter duration'][0]
-#                 other_du = oga_data[alg][executable]['Gather duration'][0] + oga_data[alg][executable]['Scatter duration'][0] - oep_du - oga_du
-#                 data_mat[-1] += [oep_du, oga_du, other_du, oga_data[alg][executable]['duration'][0]]       
-
-#     data_table = generate_table_appendix(data_mat)
-#     return data_table
-
-# print(data_format_print_main_body(oga_data_lan, no_oga_data_lan))
-# print(data_format_print_main_body(oga_data_wan, no_oga_data_wan))
-# print(data_format_print_appendix(oga_data_lan, no_oga_data_lan, no_oep_data_lan))
-# print(data_format_print_appendix(oga_data_wan, no_oga_data_wan, no_oep_data_wan))
-
-
-
-# # Plot the results
-# fig, axes = plt.subplots(3, 2, figsize=(8, 6))
-
-# for alg in list_algs:
-#     row = alg
-#     for executable in data[alg]:
-#         axes[row, 0].plot(data[alg][executable]['scale'], data[alg][executable]['duration'], markerList[executable], linewidth=1, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
-#         axes[row, 1].plot(data[alg][executable]['scale'], [x/1024 for x in data[alg][executable]['communication']], markerList[executable], linewidth=1, ls='-', ms=8, color=colors[executable], label=f'{list_scheme_formal_names[executable]}')
-#     print("Duration CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['duration'], data[alg][0]['duration'])])
-#     print("Duration GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['duration'], data[alg][0]['duration'])])
-#     print("Comm CoGNN/Ours = ", [x/y for x,y in zip(data[alg][1]['communication'], data[alg][0]['communication'])])
-#     print("Comm GraphSC/Ours = ", [x/y for x,y in zip(data[alg][2]['communication'], data[alg][0]['communication'])])
-    
-#     axes[row, 0].set_title(f'Algorithm {list_alg_names[alg]} - Duration', fontsize=14)
-#     axes[row, 0].set_xlabel('Size of Global Graph', fontsize=12)
-#     axes[row, 0].set_xticks(list_scales, list_scale_names)
-#     axes[row, 0].set_ylabel('Running Time (s)', fontsize=12)
-#     axes[row, 0].legend(fontsize=11)
-#     axes[row, 0].tick_params(axis='both', which='major', labelsize=12)
-    
-#     axes[row, 1].set_title(f'Algorithm {list_alg_names[alg]} - Communication', fontsize=14)
-#     axes[row, 1].set_xlabel('Size of Global Graph', fontsize=12)
-#     axes[row, 1].set_xticks(list_scales, list_scale_names)
-#     axes[row, 1].set_ylabel('Per-party Comm (GB)', fontsize=12)
-#     axes[row, 1].legend(fontsize=11)
-#     axes[row, 1].tick_params(axis='both', which='major', labelsize=12)
