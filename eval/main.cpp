@@ -21,6 +21,12 @@ int main(int argc, char** argv)
         printf("OGA ENABLED\n");
     #endif	
 
+    #ifdef REMOVE_OEP
+        printf("OEP DISABLED\n");
+    #else
+        printf("OEP ENABLED\n");
+    #endif	
+
 	if (scheme == 0) {
 		eval_ours(num_parts, party_id, scale, avgDegree, interRatio, alg, iterations);
 	} else if (scheme == 1) {

@@ -155,8 +155,8 @@ def generate_table_appendix(data_mat):
     """
     # Fixed headers and row labels
     column_headers = [
-        "RingSG OEP", "RingSG OGA", "RingSG Share Redistribution/Conversion", "RingSG Total",
-        "CoGNN OEP", "CoGNN OGA", "CoGNN Share Redistribution/Conversion", "CoGNN Total"
+        "RingSG OEP", "RingSG OGA", "RingSG the Rest (Merge + share redistribution/conversion)", "RingSG Total",
+        "CoGNN OEP", "CoGNN OGA", "CoGNN the Rest (Merge + share redistribution)", "CoGNN Total"
     ]
     row_labels = ["CC", "SP", "PR"]
     
@@ -255,7 +255,3 @@ print(data_format_print_appendix(oga_data_wan, no_oga_data_wan, no_oep_data_wan)
 #     axes[row, 1].set_ylabel('Per-party Comm (GB)', fontsize=12)
 #     axes[row, 1].legend(fontsize=11)
 #     axes[row, 1].tick_params(axis='both', which='major', labelsize=12)
-
-plt.tight_layout()
-plt.savefig("fig/efficiency_scale.pdf")
-plt.show()

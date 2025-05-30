@@ -12,6 +12,9 @@ void run_OEP(
     const Matrix<u8>& inputShare,
     Matrix<u8>& outputShare
 ) {
+#ifdef REMOVE_OEP
+    // Do nothing
+#else
     OblvSwitchNet snet("test");
     PRNG prng(toBlock(444));
     if (role == 0) {
@@ -21,6 +24,7 @@ void run_OEP(
     } else if (role == 2) {
         snet.OEPHelper(nextChl, prevChl, prng, dstTag.size(), srcTag.size(), inputShare.cols());
     }
+#endif
 }
 
 void run_OP(
@@ -31,6 +35,9 @@ void run_OP(
     const Matrix<u8>& inputShare,
     Matrix<u8>& outputShare
 ) {
+#ifdef REMOVE_OEP
+    // Do nothing
+#else
     OblvPermutation oblvPerm;
     // Reverse the perm first
     std::vector<u64> reversedPerm(perm.size(), 0);
@@ -44,4 +51,5 @@ void run_OP(
     } else if (role == 2) {
         oblvPerm.OPHelper(nextChl, prevChl, perm.size(), inputShare.cols());
     }
+#endif
 }

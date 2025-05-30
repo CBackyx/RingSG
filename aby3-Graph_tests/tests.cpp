@@ -3344,6 +3344,40 @@ void Sh3_Graph_CoGNN_single_party(
     //     throw std::runtime_error(LOCATION);
 }
 
+struct CommunicationStats {
+    u64 sent;
+    u64 recv;
+};
+
+CommunicationStats calculateCommunicationStats(
+    const CommPkg (&computeComms)[3],  // Reference to array of 3 CommPkg objects
+    const std::vector<Channel>& delClientChls,
+    const std::vector<Channel>& delServerChls,
+    u64 pIndex
+) {
+    CommunicationStats stats = {0, 0};
+    
+    // Process computeComms (size is known to be 3)
+    for (u64 i = 0; i < 3; ++i) {
+        stats.sent += computeComms[i].mPrev.getTotalDataSent();
+        stats.recv += computeComms[i].mPrev.getTotalDataRecv();
+        stats.sent += computeComms[i].mNext.getTotalDataSent();
+        stats.recv += computeComms[i].mNext.getTotalDataRecv();
+    }
+    
+    // Process delClientChls and delServerChls
+    for (u64 i = 0; i < delClientChls.size(); ++i) {
+        if (i != pIndex) {
+            stats.sent += delClientChls[i].getTotalDataSent();
+            stats.recv += delClientChls[i].getTotalDataRecv();
+            stats.sent += delServerChls[i].getTotalDataSent();
+            stats.recv += delServerChls[i].getTotalDataRecv();
+        }
+    }
+    
+    return stats;
+}
+
 void Sh3_Graph_Ours_App_single_party(    
     unsigned long long numP, 
     unsigned long long pIndex, 
@@ -3746,7 +3780,16 @@ void Sh3_Graph_Ours_App_single_party(
         print_duration(t_tmp, "Gather");            
     }
 
-    print_duration(t_invo, "ProtocolInvocation");
+    print_duration(t_invo, "ProtocolInvocation");   
+
+    CommunicationStats stats = calculateCommunicationStats(
+        computeComms, delClientChls, delServerChls, pIndex
+    );    
+    std::cout << IoStream::lock;
+    std::cout << "pIdx::" << pIndex << " " << std::endl;
+    std::cout << "recv: " << stats.recv / 1024.0 / 1024.0 << "MB sent:" << stats.sent / 1024.0 / 1024.0 << "MB "
+        << "prot-invoke: " << (stats.recv + stats.sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+    std::cout << IoStream::unlock;
 
     // Application-specific Result Extraction
     if (pIndex == 0 || pIndex == 1 || pIndex == 2) {
@@ -3776,26 +3819,14 @@ void Sh3_Graph_Ours_App_single_party(
     recvI64Mat(serverVertexData, serverVertexData.size(), computeComms[0].mNext);
     for (u64 i = 0; i < vertexDatas[0].size(); ++i) vertexDatas[0](i) ^= serverVertexData(i); 
 
-    u64 sent = 0, recv = 0;
-    for (u64 i = 0; i < 3; ++i) {
-        sent += computeComms[i].mPrev.getTotalDataSent();
-        recv += computeComms[i].mPrev.getTotalDataRecv();
-        sent += computeComms[i].mNext.getTotalDataSent();
-        recv += computeComms[i].mNext.getTotalDataRecv();
-    }
-    for (u64 i = 0; i < delClientChls.size(); ++i) {
-        if (i != pIndex) {
-            sent += delClientChls[i].getTotalDataSent();
-            recv += delClientChls[i].getTotalDataRecv();
-            sent += delServerChls[i].getTotalDataSent();
-            recv += delServerChls[i].getTotalDataRecv();
-        }
-    }
+    stats = calculateCommunicationStats(
+        computeComms, delClientChls, delServerChls, pIndex
+    );
 
     std::cout << IoStream::lock;
     std::cout << "pIdx::" << pIndex << " " << std::endl;
-    std::cout << "recv: " << recv / 1024.0 / 1024.0 << "MB sent:" << sent / 1024.0 / 1024.0 << "MB "
-        << "total: " << (recv + sent) / 1024.0 / 1024.0 << "MB" << std::endl;
+    std::cout << "recv: " << stats.recv / 1024.0 / 1024.0 << "MB sent:" << stats.sent / 1024.0 / 1024.0 << "MB "
+        << "total: " << (stats.recv + stats.sent) / 1024.0 / 1024.0 << "MB" << std::endl;
     std::cout << IoStream::unlock;
 
     // for (u64 j = 0; j < 6; ++j) {
