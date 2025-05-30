@@ -36,11 +36,11 @@ def parse_app_log(data: dict, net_cond):
             scale = list_scales[scale_index]
             scale_name = list_scale_names[scale_index]
             for alg_id, alg in enumerate(list_algs):     
-                alg_name = list_algs[alg_id]
+                alg_name = list_alg_names[alg_id]
                 # Initialize data structure for this algorithm if not already done
-                if alg not in data:
+                if alg_name not in data:
                     data[alg_name] = {}
-                if executable not in data[alg]:
+                if executable not in data[alg_name]:
                     data[alg_name][executable_name] = {'scale': [], 'prot-invoke duration': [], 'prot-invoke communication': [], 'total duration': [], 'total communication': [], 'result-extract duration': [], 'result-extract communication': []}
                 
                 # Read the log file
@@ -76,22 +76,91 @@ def parse_app_log(data: dict, net_cond):
                     
                     # Store the extracted data
                     data[alg_name][executable_name]['scale'].append(scale)
-                    data[alg_name][executable_name]['total duration'].append(duration)
-                    data[alg_name][executable_name]['total communication'].append(communication)
                     if executable_id < 1:
+                        data[alg_name][executable_name]['total duration'].append(duration)
+                        data[alg_name][executable_name]['total communication'].append(communication)
                         data[alg_name][executable_name]['prot-invoke duration'].append(prot_duration)
                         data[alg_name][executable_name]['prot-invoke communication'].append(prot_communication)
                         data[alg_name][executable_name]['result-extract duration'].append(extract_duration)
                         data[alg_name][executable_name]['result-extract communication'].append(communication - prot_communication)
+                    else:
+                        data[alg_name][executable_name]['prot-invoke duration'].append(duration)
+                        data[alg_name][executable_name]['prot-invoke communication'].append(communication)
+
+def dict_to_markdown_table(data):
+    """
+    Convert performance data dictionary to a Markdown table.
+    
+    Args:
+        data (dict): Nested dictionary containing performance metrics.
+    
+    Returns:
+        str: Markdown-formatted table string.
+    """
+    # Define task categories and their mappings to subtasks
+    task_categories = {
+        'CC': ('Detect Group Connection', {
+            'prot-invoke duration': 'Protocol Invocation',
+            'result-extract duration': 'Result Extraction',
+            'total duration': 'Total'
+        }),
+        'SP': ('Trace Transfer Chain', {
+            'prot-invoke duration': 'Protocol Invocation',
+            'result-extract duration': 'Result Extraction',
+            'total duration': 'Total'
+        })
+    }
+    
+    # Initialize Markdown table with headers
+    markdown_table = "| Task Category | Subtask | oursApp | CoGNN | GraphSC |\n"
+    markdown_table += "|---------------|---------|---------|-------|---------|\n"
+    
+    # Process each task category
+    for category_key, (category_name, subtasks) in task_categories.items():
+        if category_key not in data:
+            continue
+            
+        # Process each subtask
+        for metric_key, subtask_name in subtasks.items():
+            # Start row with task category (only for the first subtask)
+            category_cell = f"**{category_name}**" if metric_key == list(subtasks.keys())[0] else ""
+            
+            # Initialize row with category and subtask
+            row = f"| {category_cell} | {subtask_name} | "
+            
+            # Add data for each model
+            models = ['oursApp', 'CoGNN', 'GraphSC']
+            model_data = []
+            
+            for model in models:
+                if model in data[category_key] and metric_key in data[category_key][model]:
+                    values = data[category_key][model][metric_key]
+                    if values:
+                        # Format value with placeholder for standard deviation
+                        duration = values[0]
+                        comm = data[category_key][model][metric_key.split(' ')[0] + ' communication'][0]
+                        model_data.append(f"{duration:.2f} ({comm:.2f})")
+                    else:
+                        model_data.append("/")
+                else:
+                    model_data.append("/")
+            
+            # Complete the row
+            row += " | ".join(model_data) + " |\n"
+            markdown_table += row
+    
+    return markdown_table
 
 # Initialize data structures to store the extracted information
 app_data_lan = {}
 parse_app_log(app_data_lan, list_net_conds[0])
 
-print("RingSG App:")
-print("----")
-print(app_data_lan)
-print("----")
+print(dict_to_markdown_table(app_data_lan))
+
+# print("RingSG App:")
+# print("----")
+# print(app_data_lan)
+# print("----")
 # print("OGA DISABLED:")
 # print("----")
 # print(no_oga_data)
