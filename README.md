@@ -1,10 +1,14 @@
 # RingSG
 
-This repository contains prototype implementation of the protocols proposed in *RingSG: Optimal Secure Vertex-Centric Computation for Collaborative Graph Processing (Accepted by ACM CCS 2025)*, with primary focuses on reproducing the paper's experimental results and fostering future research.
+This repository contains a prototype implementation of the protocols proposed in *RingSG: Optimal Secure Vertex-Centric Computation for Collaborative Graph Processing (Accepted by ACM CCS 2025)*, with primary focuses on reproducing the paper's experimental results and fostering future research.
 
 The codebase is largely built upon [aby3](https://github.com/ladnir/aby3), a widely adopted scheme for efficient privacy-preserving computation. Our code adheres to the original organization/style of the [aby3](https://github.com/ladnir/aby3) library, and use modular protocol realizations with unit tests to help future utilization.
 
 Here is the table of contents of this document:
+- [0 Necessary Backgrounds](#0-necessary-backgrounds): some brief background information about RingSG;
+- [1 Introduction](#1-introduction): introduce organization of the codebase;
+- [2 Quick Set Up](#2-quick-set-up): environmental requirements and step-by-step setup instructions;
+- [3 Full Evaluation](#3-full-evaluation): steps to run each part of the experiments and plot the results.  
 
 
 > Caveat!!! Similar to the original [aby3](https://github.com/ladnir/aby3) library, this codebase should NOT be considered fully secure. It has not had a security review and there are still several security related issues that have not been fully implemented. Only use this codebase as a proof-of-concept or to benchmark the perfromance. Future work is required for this implementation to be considered secure.
@@ -170,27 +174,30 @@ RUN python build.py
 # [100%] Built target frontend
 ```
 
-Run a smallest efficiency test (~15 min):
-- This run a smallest-version of Table 3 and Table 4 (where the global graph is of the size $2^15$, instead of $2^21$).
-- Some errors might be alerted during channel setup (handshake), but they don't harm the final results.
+Run a smallest efficiency test (~10 min):
+- This run a smallest-version of Figure 8 (where the global graph is of sizes ranging from $2^{12}$ ro $2^{16}$, instead of from $2^{17}$ to $2^{21}$).
+- Some errors might be alerted during channel setup (handshake), but they don't harm the task completion.
 
 ```bash
 cd eval
-python tmp_run_cluster.py --efficiency --smallest
+python tmp_run_cluster.py --efficiency-scales --smallest
 
-# The expected console output is like:
-# qdisc netem 10: dev vethI parent 1:11 limit 1000 delay 10.0ms
+# qdisc htb 1: dev vethH root refcnt 113 r2q 10 default 0x11 direct_packets_stat 0 direct_qlen 1000
+# qdisc netem 10: dev vethH parent 1:11 limit 1000 delay 1.0ms
+# qdisc noqueue 0: dev lo root refcnt 2 
+# qdisc htb 1: dev vethI root refcnt 113 r2q 10 default 0x11 direct_packets_stat 0 direct_qlen 1000
+# qdisc netem 10: dev vethI parent 1:11 limit 1000 delay 1.0ms
 # qdisc noqueue 0: dev lo root refcnt 2 
 # qdisc htb 1: dev vethJ root refcnt 113 r2q 10 default 0x11 direct_packets_stat 0 direct_qlen 1000
-# qdisc netem 10: dev vethJ parent 1:11 limit 1000 delay 10.0ms
-# sudo ip netns exec A taskset --cpu-list 0-2 ./.././out/build/linux/eval/eval 0 8 0 10 3 0.4 1 5
-# sudo ip netns exec B taskset --cpu-list 3-5 ./.././out/build/linux/eval/eval 0 8 1 10 3 0.4 1 5
-# sudo ip netns exec C taskset --cpu-list 6-8 ./.././out/build/linux/eval/eval 0 8 2 10 3 0.4 1 5
-# sudo ip netns exec D taskset --cpu-list 9-11 ./.././out/build/linux/eval/eval 0 8 3 10 3 0.4 1 5
-# sudo ip netns exec E taskset --cpu-list 12-14 ./.././out/build/linux/eval/eval 0 8 4 10 3 0.4 1 5
-# sudo ip netns exec F taskset --cpu-list 15-17 ./.././out/build/linux/eval/eval 0 8 5 10 3 0.4 1 5
-# sudo ip netns exec G taskset --cpu-list 18-20 ./.././out/build/linux/eval/eval 0 8 6 10 3 0.4 1 5
-# sudo ip netns exec H taskset --cpu-list 21-23 ./.././out/build/linux/eval/eval 0 8 7 10 3 0.4 1 5
+# qdisc netem 10: dev vethJ parent 1:11 limit 1000 delay 1.0ms
+# sudo ip netns exec A taskset --cpu-list 0-2 ./.././out/build/linux/eval/eval 1 8 0 9 3 0.4 2 5
+# sudo ip netns exec B taskset --cpu-list 3-5 ./.././out/build/linux/eval/eval 1 8 1 9 3 0.4 2 5
+# sudo ip netns exec C taskset --cpu-list 6-8 ./.././out/build/linux/eval/eval 1 8 2 9 3 0.4 2 5
+# sudo ip netns exec D taskset --cpu-list 9-11 ./.././out/build/linux/eval/eval 1 8 3 9 3 0.4 2 5
+# sudo ip netns exec E taskset --cpu-list 12-14 ./.././out/build/linux/eval/eval 1 8 4 9 3 0.4 2 5
+# sudo ip netns exec F taskset --cpu-list 15-17 ./.././out/build/linux/eval/eval 1 8 5 9 3 0.4 2 5
+# sudo ip netns exec G taskset --cpu-list 18-20 ./.././out/build/linux/eval/eval 1 8 6 9 3 0.4 2 5
+# sudo ip netns exec H taskset --cpu-list 21-23 ./.././out/build/linux/eval/eval 1 8 7 9 3 0.4 2 5
 # SUCCESS
 ```
 
@@ -230,70 +237,67 @@ Now let's head for the full evaluations corresponding to the key results obtaine
 The evaluation options provided by `tmp_run_cluster.py` include:
 > Note that we also specify which option (setting) corresponds to which Figure/Table in our paper. 
 
-# ABY 3 and Applications
- 
-## Introduction
- 
-This library provides the semi-honest implementation of [ABY 3](https://eprint.iacr.org/2018/403.pdf) and [Fast Database Joins for Secret Shared Data](https://eprint.iacr.org/2019/518.pdf).
+```bash
+python tmp_run_cluster.py -h 
 
-The repo includes the following application:
- * Linear Regression (training/inference)
- * Logistic Regression (training/inference)
- * Database Inner, Left and Full Joins
- * Database Union
- * Set Cardinality
- * Threat Log Comparison ([see Section 5](https://eprint.iacr.org/2019/518.pdf))
- * ERIC Application ([see Section 5](https://eprint.iacr.org/2019/518.pdf))
+# usage: tmp_run_cluster.py [-h] [--efficiency-scales] [--efficiency-num-parties] [--efficiency-vertex-degrees] [--efficiency]
+#                           [--efficiency-remove-oga] [--efficiency-remove-oep] [--three-pc-cmp] [--app] [--prior-non-e2e] [--smallest] [--all]
 
-A tutorial can be found [here](https://github.com/ladnir/aby3/blob/master/frontend/aby3Tutorial.cpp). It includes a description of how to use the API and a discussion at the end on how the framework is implemented.
+# Evaluate RingSG, CoGNN and GraphSC for various collaborative graph processing tasks.
 
-## Warning 
-
-This codebase should **NOT** be considered fully secure. It has not had a security review and there are still several security related issues that have not been fully implemented. Only use this codebase as a proof-of-concept or to benchmark the perfromance. Future work is required for this implementation to be considered secure. 
-
-Moreover, some features have not been fully developed and contains bugs. For example, the task scheduler sometime fails. This is a known issue.
-
-## Build
- 
-The library is *cross platform* and has been tested on Windows and Linux. The dependencies are:
-
- * [libOTe](https://github.com/osu-crypto/libOTe)
- * [Boost](http://www.boost.org/) (networking)
- * [function2](https://github.com/Naios/function2)
- * [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-
- 
-In short, this will build the project
-
-```
-git clone https://github.com/ladnir/aby3.git
-cd aby3/
-python3 build.py --setup
-python3 build.py 
+# optional arguments:
+#   -h, --help            show this help message and exit
+#   --efficiency-scales   Evaluate efficiency (duration + communication) with various graphs scales  (~10h, Figure 8)
+#   --efficiency-num-parties
+#                         Evaluate efficiency (duration + communication) with various numbers of parties (~10h, Figure 9)
+#   --efficiency-vertex-degrees
+#                         Evaluate efficiency (duration + communication) with various average vertex degrees. (~10h, Figure 10)
+#   --efficiency          Evaluate efficiency (duration + communication) with various network conditions, graph algs. (~10h, Table 3, Table 4)
+#   --efficiency-remove-oga
+#                         Evaluate efficiency (duration + communication) with various network conditions, graph algs. (Remove OGA) (~5h, Table 3, Table 4)
+#   --efficiency-remove-oep
+#                         Evaluate efficiency (duration + communication) with various network conditions, graph algs. (Remove OEP) (~9h, Table 3, Table 4)
+#   --three-pc-cmp        Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion. (~5h, Table 2)
+#   --app                 Evaluate Application (~4h, Table 5)
+#   --prior-non-e2e       Evaluate prior works non e2e (~5h, Table 5)
+#   --smallest            Evaluate with smallest scale
+#   --all                 Evaluate ALL
 ```
 
-To see all the command line options, execute the program 
- 
-`out/build/linux/frontend`
+You can feel free to run ALL experiments with *smallest* scale to quickly verify the results:
 
-or
-
-`out/build/x64-Release/frontend/frontend`
-
-The library can be linked by linking the binraries in `lib/` and `thirdparty/win` or `thirdparty/unix` depending on the platform.
-
-## Help
- 
-Contact Peter Rindal peterrindal@gmail.com for any assistance on building  or running the library.
-
-## Citing
-
- Spread the word!
-
+```bash
+python tmp_run_cluster.py --all --smallest
 ```
-@misc{aby3,
-    author = {Peter Rindal},
-    title = {{The ABY3 Framework for Machine Learning and Database Operations.}},
-    howpublished = {\url{https://github.com/ladnir/aby3}},
-}
+
+Or, run each experiment with *smallest* scale, like:
+
+```bash
+python tmp_run_cluster.py --efficiency-scales --smallest
 ```
+
+You can `cat` the corresponding log files for each evaluation setting to view the current running progress.
+
+As you have run each part of the experiments, plot the corresponding results (as PDF figures or markdown Tables):
+
+> Note that you can should add `--smallest` flag to the plot instructions if you run the experiments with smallest scale.
+
+```bash
+cd eval/plot
+python plot_scales.py # Figure 8; after you run --efficiency-scales
+python plot_num_parties.py # Figure 9; after you run --efficiency-num-parties
+python plot_vertex_degrees.py # Figure 10; after you run --efficiency-vertex-degrees
+python plot_3pc_cmp.py # Table 2; after you run --three-pc-cmp
+python plot_ablation.py # Table 3, 4; after you run --efficiency, --efficiency-remove-oga, --efficiency-remove-oep
+python plot_e2e.py # Table 5; after you run --app, --prior-non-e2e
+```
+
+Copy the PDF figure from the container for local display:
+
+```bash
+# In your local (host) machine:
+mkdir tmp
+sudo docker cp <your-container-id>:/work/Art/eval/plot/fig ./
+```
+
+Have fun!

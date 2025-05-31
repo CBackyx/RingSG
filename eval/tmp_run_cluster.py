@@ -539,17 +539,17 @@ def main():
     global isSmallest
 
     parser = argparse.ArgumentParser(description='Evaluate RingSG, CoGNN and GraphSC for various collaborative graph processing tasks.')
-    parser.add_argument('--efficiency-scales', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales')
-    parser.add_argument('--efficiency-num-parties', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and numbers of parties')
-    parser.add_argument('--efficiency-vertex-degrees', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions and average vertex degrees.')
-    parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees.')
-    parser.add_argument('--efficiency-remove-oga', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees. (Remove OGA)')
-    parser.add_argument('--efficiency-remove-oep', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs, and graphs scales, numbers of parties, vertex degrees. (Remove OEP)')
-    parser.add_argument('--three-pc-cmp', action='store_true', help='Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion.')
-    parser.add_argument('--app', action='store_true', help='Evaluate Application')
-    parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e')
-    parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale')
-    parser.add_argument('--all', action='store_true', help='Evaluate ALL')
+    parser.add_argument('--efficiency-scales', action='store_true', help='Evaluate efficiency (duration + communication) with various graphs scales. (~10h, Figure 8)')
+    parser.add_argument('--efficiency-num-parties', action='store_true', help='Evaluate efficiency (duration + communication) with various numbers of parties. (~10h, Figure 9)')
+    parser.add_argument('--efficiency-vertex-degrees', action='store_true', help='Evaluate efficiency (duration + communication) with various average vertex degrees. (~10h, Figure 10)')
+    parser.add_argument('--efficiency', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs. (~10h, Table 3, Table 4)')
+    parser.add_argument('--efficiency-remove-oga', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs. (Remove OGA) (~5h, Table 3, Table 4)')
+    parser.add_argument('--efficiency-remove-oep', action='store_true', help='Evaluate efficiency (duration + communication) with various network conditions, graph algs. (Remove OEP) (~9h, Table 3, Table 4)')
+    parser.add_argument('--three-pc-cmp', action='store_true', help='Evaluate efficiency (duration + communication) for incorporating 3pc via share conversion. (~5h, Table 2)')
+    parser.add_argument('--app', action='store_true', help='Evaluate Application. (~4h, Table 5)')
+    parser.add_argument('--prior-non-e2e', action='store_true', help='Evaluate prior works non e2e. (~5h, Table 5)')
+    parser.add_argument('--smallest', action='store_true', help='Evaluate with smallest scale.')
+    parser.add_argument('--all', action='store_true', help='Evaluate ALL.')
     args = parser.parse_args()
 
     isSmallest = args.smallest
