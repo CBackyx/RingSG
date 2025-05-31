@@ -17,6 +17,8 @@ Here is the table of contents of this document:
 
 ### 0.1 Collaborative Graph Processing
 
+![An example of collaborative graph processing](fig/collaborative-graph-processing-illustration.pdf)
+
 *Collaborative graph processing* refers to the jointly analysis of the private graph data held by multiple graph owners, *without revealing each owner's raw graph data* to any other graph owners. The local graphs of different graph owners are interleaved by some *inter-edges* and finally consititute a *global graph*.
 
 - For example, in financial scenarios, each graph owner can be a bank, then each local graph is the transfer graph inside a bank, and inter-edges correspond to inter-bank transfers. These local transfer graphs are concatenated into a global transfer graph by inter-bank transfers.
