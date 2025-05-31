@@ -226,7 +226,7 @@ Each line like `sudo ip netns exec <> taskset --cpu-list <>` set up a process wi
 After this run, the corresponding logs are stored in `eval/log`, organized based on evaluation settings (like evaluated schemes, number of parties, algorithms, etc.). Fill free to browse them! For example:
 
 ```bash
-cat log/efficiency/log/executable_0/net_cond_4000_1/num_parts_8/scale_10/alg_0/iters_5/efficiency_0.log
+cat log/efficiency-scales/log/executable_0/net_cond_4000_1/num_parts_8/scale_10/alg_0/iters_5/efficiency_0.log
 
 # The expected console output is like:
 # OGA ENABLED
