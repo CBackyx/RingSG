@@ -573,8 +573,8 @@ def main():
     if args.prior_non_e2e:
         eval_prior_non_e2e()
     if args.all:
-        # eval_efficiency_scales()
-        # eval_efficiency_num_parties()
+        eval_efficiency_scales()
+        eval_efficiency_num_parties()
         eval_efficiency_vertex_degrees()
         eval_efficiency()
         eval_efficiency_remove_oga()

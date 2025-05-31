@@ -80,11 +80,11 @@ def parse_app_log(data: dict, net_cond):
                         elif 'total:' in line:
                             communication_match = re.search(r'total: ([\d.]+)MB', line)
                             if communication_match:
-                                communication = float(communication_match.group(1))     
+                                communication = float(communication_match.group(1)) / 1024 # to GB
                         elif executable_id < 1 and 'prot-invoke:' in line:
                             communication_match = re.search(r'prot-invoke: ([\d.]+)MB', line)
                             if communication_match:
-                                prot_communication = float(communication_match.group(1))                                               
+                                prot_communication = float(communication_match.group(1)) / 1024 # to GB                                               
                     
                     # Store the extracted data
                     data[alg_name][executable_name]['scale'].append(scale)
@@ -151,7 +151,7 @@ def dict_to_markdown_table(data):
                         # Format value with placeholder for standard deviation
                         duration = values[0]
                         comm = data[category_key][model][metric_key.split(' ')[0] + ' communication'][0]
-                        model_data.append(f"{duration:.2f} ({comm:.2f})")
+                        model_data.append(f"{duration:.4f} ({comm:.4f})")
                     else:
                         model_data.append("/")
                 else:
@@ -167,4 +167,7 @@ def dict_to_markdown_table(data):
 app_data_lan = {}
 parse_app_log(app_data_lan, list_net_conds[0])
 
+print(">>>>TABLE 5:")
+print("----")
 print(dict_to_markdown_table(app_data_lan))
+print("----")

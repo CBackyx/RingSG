@@ -233,7 +233,22 @@ def data_format_print_appendix(oga_data: dict, no_oga_data: dict, no_oep_data: d
     data_table = generate_table_appendix(data_mat)
     return data_table
 
+print(">>>>TABLE 3:")
+print("----")
 print(data_format_print_main_body(oga_data_lan, no_oga_data_lan))
+print("----")
+
+print(">>>>TABLE 4:")
+print("----")
 print(data_format_print_main_body(oga_data_wan, no_oga_data_wan))
+print("----")
+
+print(">>>>TABLE 6:")
+print("----")
 print(data_format_print_appendix(oga_data_lan, no_oga_data_lan, no_oep_data_lan))
+print("----")
+
+print(">>>>TABLE 7:")
+print("----")
 print(data_format_print_appendix(oga_data_wan, no_oga_data_wan, no_oep_data_wan))
+print("----")

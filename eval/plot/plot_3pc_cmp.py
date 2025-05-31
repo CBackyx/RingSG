@@ -63,7 +63,7 @@ def parse_log(data: dict, net_cond, base_path: str):
                         else:
                             communication_match = re.search(r'total: ([\d.]+)MB', line)
                             if communication_match:
-                                communication = float(communication_match.group(1))                        
+                                communication = float(communication_match.group(1)) / 1024                        
                     
                     # Store the extracted data
                     data[alg][executable]['scale'].append(scale)
@@ -136,4 +136,7 @@ def data_format_print_main_body(data: dict):
     data_table = generate_table_main_body(data_mat)
     return data_table
 
+print(">>>>TABLE 2:")
+print("----")
 print(data_format_print_main_body(data_lan))
+print("----")
