@@ -50,7 +50,7 @@ RingSG is a new system proposed for collaborative graph processing. It is built 
 </p>
 
 - **Ring-ScatterGather**: A novel computation paradigm that securely decomposes secure vertex-centric computation into rings of parallel tasks, where each task handles a *subgraph* of the *global graph (consisting of all graph owners' graphs)* and is assigned to a (sub)group of parties among all the graph owners for execution. Ring-ScatterGather eliminates expensive cryptographic operations used in prior works (e.g., oblivious sort used in [GraphSC, IEEE S&P'15](https://ieeexplore.ieee.org/document/7163037) and [Graphiti, ACM CCS'24](https://dl.acm.org/doi/10.1145/3658644.3670393)), and simultaneously ensures that the MPC tasks in each ring are mutually exclusive (which means that the graph data handled by different tasks is non-overlapping, different from the overlapped tasks in [CoGNN, ACM CCS'24](https://dl.acm.org/doi/10.1145/3658644.3670300)). This finally leads to the first touch of the *optimal computation/communication complexity for secure vertex-centric computation*.
-    - In particular, for each iteration of secure vertex-centric computation, the overall computation/communication overhead of all parties in RingSG is $O(|V|+|E|)$, where $|V|$ and $|E|$ represent the numbers of vertices and edges in the global graph, respectively. This is \emph{optimal} because it is linear to $(|V|+|E|)$ and independent of the number of parties $N$, making it more efficient than both state-of-the-art outsourced computation schemes (GraphSC and Graphiti, $O((|V|+|E|)\log(|V| + |E|))$) and CoGNN ($O(N|V|+|E|)$). See [Section 4 Ring-ScatterGather Paradigm].
+    - In particular, for each iteration of secure vertex-centric computation, the overall computation/communication overhead of all parties in RingSG is $O(|V|+|E|)$, where $|V|$ and $|E|$ represent the numbers of vertices and edges in the global graph, respectively. This is \emph{optimal} because it is linear to $(|V|+|E|)$ and independent of the number of parties $N$, making it more efficient than both state-of-the-art outsourced computation schemes ( GraphSC and Graphiti, $O((|V|+|E|)\log(|V| + |E|))$ ) and CoGNN ( $O(N|V|+|E|)$ ). See [Section 4 Ring-ScatterGather Paradigm].
 - **Concrete Efficiency via Multiple Protocol-Level Optimizations**: Within the Ring-ScatterGather paradigm, RingSG introduces two key concrete-efficiency optimizations:
     - On-demand Incorporation of 3PC via Share Conversion: While the Ring-ScatterGather paradigm requires 2-out-of-2 secret share for workload decomposition and task distribution, we propose dynamic share-conversion mechanisms to allow incorporation of 3PC based on 2-out-of-3 secret share for efficient task execution. See [Section 5.1 On-demand Incorporation of 3PC].
     - Oblivious Group Aggregation (OGA) with halved rounds: We pinpoint the most cost-heavy operation in RingSG (i.e., OGA, which is used for securely aggregating edge-generated updates targeting the same vertices) and design a novel protocol that halves the communication rounds of the state-of-the-art protocol without introducing extra operational overheads. This leads to significant decrease in the system running time. See [Section 5.2 OGA with halved rounds].
@@ -70,7 +70,7 @@ The experiments include:
 - Table 3 and Table 4: Per-iteration duration breakdowns of RingSG and CoGNN to demonstrate the efficiency of our OGA protocol.
 - Table 5: Running time and communication of the two end-to-end instantiations of RingSG, with a comparison to the non-end-to-end counterparts of prior state-of-the-arts.
 
-> Note that RingSG contributes primarily to efficient secure vertex-centric computation (graph processing), so the evaluated graph algorithms do not include GNNs, whose costs are dominated by non-graph operations like weight matric multiplication.
+> Note that RingSG contributes primarily to efficient secure vertex-centric computation (graph processing), so the evaluated graph algorithms do not include GNNs, whose costs are dominated by non-graph operations like weight matrix multiplication.
 
 ## 1 Introduction
 
@@ -174,8 +174,8 @@ Now start the container and build the artifacts from source (~5min):
 
 ```bash
 sudo docker run -it --rm --privileged --security-opt apparmor=unconfined cbackyx/ringsg-ae:build-from-source-v1 /bin/bash
-RUN python build.py --setup
-RUN python build.py
+python build.py --setup
+python build.py
 
 # The expected output is:
 # ...
@@ -195,7 +195,7 @@ RUN python build.py
 ```
 
 Run a smallest efficiency test (~10 min):
-- This run a smallest-version of Figure 8 (where the global graph is of sizes ranging from $2^{12}$ ro $2^{16}$, instead of from $2^{17}$ to $2^{21}$).
+- This run corresponds to a smallest-version of Figure 8 (where the global graph is of sizes ranging from $2^{12}$ ro $2^{16}$, instead of from $2^{17}$ to $2^{21}$).
 - Some errors might be alerted during channel setup (handshake), but they don't harm the task completion.
 
 ```bash
@@ -255,7 +255,7 @@ Now let's head for the full evaluations corresponding to the key results obtaine
 - We provide a smallest version of our experiments for our audience who want to quickly verify our results. To enable this version, simply add the `--smallest` flag to each of your evaluation and plot instruction.
 
 The evaluation options provided by `tmp_run_cluster.py` include:
-> Note that we also specify which option (setting) corresponds to which Figure/Table in our paper.
+> Note that we also clarify which option (setting) corresponds to each Figure/Table in our paper.
 > Estimations of running durations are provided, but it shall vary according to your hardware condition.
 
 ```bash
@@ -301,7 +301,7 @@ You can `cat` the corresponding log files for each evaluation setting to view th
 
 As you have run each part of the experiments, plot the corresponding results (as PDF figures or markdown Tables):
 
-> Note that you can should add `--smallest` flag to the plot instructions if you run the experiments with smallest scale.
+> Note that you can should add `--smallest` flag to the plot instructions if you run the corresponding experiments with smallest scale.
 
 ```bash
 cd eval/plot
