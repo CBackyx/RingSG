@@ -17,9 +17,9 @@ Here is the table of contents of this document:
 
 ### 0.1 Collaborative Graph Processing
 
-<div align="center;">
+<p align="center">
   <img src="fig/example.png" alt="An example of collaborative graph processing" width="500">
-</div>
+</p>
 
 *Collaborative graph processing* refers to the jointly analysis of the private graph data held by multiple graph owners, *without revealing each owner's raw graph data* to any other graph owners. The local graphs of different graph owners are interleaved by some *inter-edges* and finally consititute a *global graph*.
 
