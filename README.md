@@ -237,7 +237,8 @@ Now let's head for the full evaluations corresponding to the key results obtaine
 - We provide a smallest version of our experiments for our audience who want to quickly verify our results. To enable this version, simply add the `--smallest` flag to each of your evaluation and plot instruction.
 
 The evaluation options provided by `tmp_run_cluster.py` include:
-> Note that we also specify which option (setting) corresponds to which Figure/Table in our paper. 
+> Note that we also specify which option (setting) corresponds to which Figure/Table in our paper.
+> Estimations of running durations are provided, but it shall vary according to your hardware condition.
 
 ```bash
 python tmp_run_cluster.py -h 
