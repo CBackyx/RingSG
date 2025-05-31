@@ -5,7 +5,7 @@
 <h1 >Optimal Secure Vertex-Centric Computation <br> for Collaborative Graph Processing</h1>
 
 [![License](https://img.shields.io/github/license/CBackyx/RingSG)](https://opensource.org/licenses/MIT)
-[![ePrint]()]()
+<!-- [![ePrint]()]() -->
 
 </div>
 
