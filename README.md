@@ -2,7 +2,7 @@
 
 <img src="./fig/logo.png" width=140>
 
-<h1 >Optimal Framework for Secure Vertex-Centric Computation</h1>
+<h1 >Optimal Secure Vertex-Centric Computation <br> for Collaborative Graph Processing</h1>
 
 [![License](https://img.shields.io/github/license/cbackyx/RingSG)](https://opensource.org/licenses/Apache-2.0)
 [![ePrint]()]()
