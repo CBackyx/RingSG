@@ -11,7 +11,7 @@
 
 This repository contains a prototype implementation of the protocols proposed in *RingSG: Optimal Secure Vertex-Centric Computation for Collaborative Graph Processing (Accepted by ACM CCS 2025)*, with primary focuses on reproducing the paper's experimental results and fostering future research.
 
-The codebase is largely built upon [aby3](https://github.com/ladnir/aby3), a widely adopted scheme for efficient privacy-preserving computation. Our code adheres to the original organization/style of the [aby3](https://github.com/ladnir/aby3) library, and use modular protocol realizations with unit tests to help future utilization.
+The codebase is largely built upon [aby3](https://github.com/ladnir/aby3), a widely adopted scheme for efficient privacy-preserving computation. Our code adheres to the original organization/style of the [aby3](https://github.com/ladnir/aby3) library, and uses modular protocol realizations with unit tests to help future utilization.
 
 Here is the table of contents of this document:
 - [0 Necessary Backgrounds](#0-necessary-backgrounds): some brief background information about RingSG;
@@ -32,11 +32,11 @@ Here is the table of contents of this document:
 
 *Collaborative graph processing* refers to the jointly analysis of the private graph data held by multiple graph owners, *without revealing each owner's raw graph data* to any other graph owners. The local graphs of different graph owners are interleaved by some *inter-edges* and finally consititute a *global graph*.
 
-- For example, in financial scenarios, each graph owner can be a bank, then each local graph is the transfer graph inside a bank, and inter-edges correspond to inter-bank transfers. These local transfer graphs are concatenated into a global transfer graph by inter-bank transfers.
+- For example, in financial scenarios, each graph owner can be a bank, with each local graph being the transfer graph inside a bank, and inter-edges corresponding to inter-bank transfers. These local transfer graphs are concatenated into a global transfer graph by inter-bank transfers.
 
 The goal of Collaborative Graph Processing is to have the parties (graph owners) jointly run *a graph algorithm* on the global graph, thus obtaining data insights that are unavailable from a siloed graph held by a single graph owner. In the representative example above, $P_0$ wants to detect the connections between two groups of vertices (A and B). Although both groups are within $G_0$, $P_0$ cannot detect the connections on its own, because A and B are inter-connected by complex cross-graph links, rather than simple intra-edges. This is a common money laundering strategy for financial criminals to hide the source of illegal money. To detect such behaviors, all four parties need to collectively analyze the global graph. 
 
-- The graph algorithm can be as traditional as Connected Component Labeling, Shortest Path and PageRank, or be more Advanced like Graph Neural Network training/inference.
+- The graph algorithm can be as traditional as [Connected Component Labeling](https://en.wikipedia.org/wiki/Connected-component_labeling), [Shortest Path](http://en.wikipedia.org/wiki/Shortest_path_problem) and [PageRank](http://en.wikipedia.org/wiki/PageRank), or be more Advanced like [Graph Neural Network](https://en.wikipedia.org/wiki/Graph_neural_network) training/inference.
 - A straightforward example is in Anti-money laundering (AML), where we MUST aggregates graph data from multiple financial institutions to detect malicious cross-border fund flows, which ecomes infeasible when relying solely on isolated local graph data maintained by individual banks.
 
 A primary requirement of collaborative graph processing is to protect the raw graph data privacy of each graph owner. We want the graph owners to jointly obtain a graph algorithm output without viewing/direct sharing others' raw graph data, which raises substantial privacy concerns and may violate regulatory requirements.
@@ -59,7 +59,7 @@ RingSG is a new system proposed for collaborative graph processing. It is built 
 ## 0.3 The Evaluations Performed in the Paper
 
 Our experiments center around evaluating the efficiency advantages of RingSG compared to prior state-of-the-arts. Our baselines include:
-- GraphSC, which refer to a series of works based on outsourced computation. We utilize its state-of-the-art design proposed in Graphiti, ACM CCS 2024, and reimplemented it via aby3 for fair comparison.
+- GraphSC, which refer to a series of works based on the outsourced secure computation paradigm. We utilize its state-of-the-art design proposed in Graphiti, ACM CCS 2024, and reimplemented it via aby3 for fair comparison.
 - CoGNN, ACM CCS 2024, which is more similar to RingSG due the its collaborative computation nature (instead of outsourced computation). We reimplemented CoGNN by replacing its expensive 2PC with aby3-based 3PC, through our dynamic share conversion mechanisms. This baseline should fairly demonstrate the paradigm-specific advantage of RingSG compared to CoGNN, by neutralizing the efficiency difference caused by different MPC backends.
 
 The experiments include:
