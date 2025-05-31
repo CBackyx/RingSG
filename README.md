@@ -1,4 +1,13 @@
-# RingSG
+<div align="center">
+
+<img src="./fig/logo.png" width=120>
+
+<h1 >RingSG: <br> Optimal Framework for Secure Vertex-Centric Computation</h1>
+
+[![License]()](https://opensource.org/licenses/Apache-2.0)
+[![ePrint]()]()
+
+</div>
 
 This repository contains a prototype implementation of the protocols proposed in *RingSG: Optimal Secure Vertex-Centric Computation for Collaborative Graph Processing (Accepted by ACM CCS 2025)*, with primary focuses on reproducing the paper's experimental results and fostering future research.
 
