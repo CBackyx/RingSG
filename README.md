@@ -17,7 +17,7 @@ Here is the table of contents of this document:
 
 ### 0.1 Collaborative Graph Processing
 
-<div style="text-align: center;">
+<div align="center;">
   <img src="fig/example.png" alt="An example of collaborative graph processing" width="500">
 </div>
 
