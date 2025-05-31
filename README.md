@@ -167,13 +167,13 @@ We summarize the required hardware resources and software conditions for running
 Pull the image (~10min, depending on your network condition):
 
 ```bash
-sudo docker pull cbackyx/ringsg-ae:build-from-source-v1
+sudo docker pull cbackyx/ringsg-ae:build-from-source-v2
 ```
 
 Now start the container and build the artifacts from source (~5min):
 
 ```bash
-sudo docker run -it --rm --privileged --security-opt apparmor=unconfined cbackyx/ringsg-ae:build-from-source-v1 /bin/bash
+sudo docker run -it --rm --privileged --security-opt apparmor=unconfined cbackyx/ringsg-ae:build-from-source-v2 /bin/bash
 python build.py --setup
 python build.py
 
