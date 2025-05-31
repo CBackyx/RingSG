@@ -157,7 +157,7 @@ We summarize the required hardware resources and software conditions for running
 **Software Resources**
 - Operating System
     - We tested on Ubuntu 20.04 (with APT package manager)
-- Docker with CUDA support (nvidia-container-toolkit)
+- Docker
     - We tested on Docker version 27.4.0
 
 ### 2.2 Step-by-Step Instructions
