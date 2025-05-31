@@ -25,7 +25,7 @@ Here is the table of contents of this document:
 
 - For example, in financial scenarios, each graph owner can be a bank, then each local graph is the transfer graph inside a bank, and inter-edges correspond to inter-bank transfers. These local transfer graphs are concatenated into a global transfer graph by inter-bank transfers.
 
-The goal of Collaborative Graph Processing is to have the parties (graph owners) jointly run *a graph algorithm* on the global graph, thus obtaining data insights that are unavailable from a siloed graph held by a single graph owner.
+The goal of Collaborative Graph Processing is to have the parties (graph owners) jointly run *a graph algorithm* on the global graph, thus obtaining data insights that are unavailable from a siloed graph held by a single graph owner. In the representative example above, $P_0$ wants to detect the connections between two groups of vertices (A and B). Although both groups are within $G_0$, $P_0$ cannot detect the connections on its own, because A and B are inter-connected by complex cross-graph links, rather than simple intra-edges. This is a common money laundering strategy for financial criminals to hide the source of illegal money. To detect such behaviors, all four parties need to collectively analyze the global graph. 
 
 - The graph algorithm can be as traditional as Connected Component Labeling, Shortest Path and PageRank, or be more Advanced like Graph Neural Network training/inference.
 - A straightforward example is in Anti-money laundering (AML), where we MUST aggregates graph data from multiple financial institutions to detect malicious cross-border fund flows, which ecomes infeasible when relying solely on isolated local graph data maintained by individual banks.
