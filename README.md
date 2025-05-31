@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./fig/logo.png" width=140>
+<img src="./fig/logo.png" width=160>
 
 <h1 >Optimal Secure Vertex-Centric Computation <br> for Collaborative Graph Processing</h1>
 
