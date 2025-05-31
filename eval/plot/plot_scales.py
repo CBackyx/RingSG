@@ -20,13 +20,13 @@ data = {}
 list_schemes = [0, 1, 2] # 0 for Ours
 list_scheme_names = ["ours", "CoGNN", "GraphSC"]
 list_scheme_formal_names = ["RingSG", "CoGNN", "GraphSC"]
-list_net_conds = [(4000, 1), (200, 10)]
+list_net_conds = [(4000, 1)]
 list_num_parts = [8]
 list_scales = [12, 13, 14, 15, 16] # 2 ^ n
 list_scale_names = ["$2^{17}$", "$2^{18}$", "$2^{19}$", "$2^{20}$", "$2^{21}$"]
 if isSmallest:
     list_scales = range(7, 12) # 2 ^ n
-    list_scale_names = [f"$2^{x + 5}$" for x in list_scales]
+    list_scale_names = [f"$2^{{{x + 5}}}$" for x in list_scales]
 list_algs = [0, 1, 2] # 0 for CC
 list_alg_names = ["CC", "SP", "PR"]
 iterations = 5
@@ -34,7 +34,7 @@ colors = ["#4B5F66", "#E39A56", "#BA5B59"]
 
 # Traverse the log files
 for executable in list_schemes:
-    net_cond = list_net_conds[1]
+    net_cond = list_net_conds[0]
     num_parts = list_num_parts[0]
     for scale_index in range(len(list_scales)):
         scale = list_scales[scale_index]

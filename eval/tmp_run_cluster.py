@@ -216,7 +216,7 @@ def run_graph_processing_with_limited_cores(scheme, net_cond, num_parts, scale, 
         all_success = True
         for process in processList:
             process.wait()
-            if process.returncode != 0:
+            if process.returncode != 0 and process.returncode != 255:
                 all_success = False
                 print(f"Process {process} failed with return code {process.returncode}")
         
@@ -327,7 +327,7 @@ def eval_efficiency_vertex_degrees():
     global isSmallest
 
     isCluster = True
-    set_root_paths("log/vertex-degree")
+    set_root_paths("log/efficiency-vertex-degrees")
 
     print("##<------------>##")
 
