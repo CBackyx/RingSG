@@ -117,9 +117,118 @@ The organization of this codebase and basic information on each folder/file are 
     └── README.md
 ```
 
+## 2 Quick Set Up
 
+We provide a build-from-source Docker image for your convenience.
+- Nevertheless, you can also set up RingSG according to the original [aby3](https://github.com/ladnir/aby3) library's setup instructions, which might be non-trivial do to the dependencies setup process.
 
+### 2.1 Environmental Requirements
 
+We summarize the required hardware resources and software conditions for running the Docker image we provide.
+
+**Hardware Resources**
+- An x86_64 Linux server (at least 64GB RAM, 256GB spare disk)
+    - We tested on Intel(R) Xeon(R) Gold 6348 CPU @ 2.60GHz with 512GB RAM
+
+**Software Resources**
+- Operating System
+    - We tested on Ubuntu 20.04 (with APT package manager)
+- Docker with CUDA support (nvidia-container-toolkit)
+    - We tested on Docker version 27.4.0
+
+### 2.2 Step-by-Step Instructions
+
+> Please don't hesitate to reach out for us if you met any problems during this process. Please kindly attach the error information. Thanks!
+
+Pull the image (~10min, depending on your network condition):
+
+```bash
+sudo docker pull cbackyx/ringsg-ae:build-from-source-v1
+```
+
+Now start the container and build the artifacts from source (~5min):
+
+```bash
+sudo docker run -it --rm --privileged --security-opt apparmor=unconfined cbackyx/ringsg-ae:build-from-source-v1 /bin/bash
+RUN python build.py --setup
+RUN python build.py
+
+# The expected output is:
+# ...
+# [ 92%] Building CXX object eval/CMakeFiles/eval-remove-oga.dir/eval_func.cpp.o
+# [ 93%] Linking CXX static library libaby3-graph_Tests-remove-oep.a
+# [ 93%] Built target aby3-graph_Tests-remove-oep
+# [ 94%] Building CXX object eval/CMakeFiles/eval-remove-oep.dir/main.cpp.o
+# [ 95%] Building CXX object eval/CMakeFiles/eval-remove-oep.dir/eval_func.cpp.o
+# [ 96%] Linking CXX executable eval
+# [ 96%] Built target eval
+# [ 97%] Linking CXX executable eval-remove-oga
+# [ 98%] Linking CXX executable eval-remove-oep
+# [ 98%] Built target eval-remove-oga
+# [ 98%] Built target eval-remove-oep
+# [100%] Linking CXX executable frontend
+# [100%] Built target frontend
+```
+
+Run a smallest efficiency test (~15 min):
+- This run a smallest-version of Table 3 and Table 4 (where the global graph is of the size $2^15$, instead of $2^21$).
+- Some errors might be alerted during channel setup (handshake), but they don't harm the final results.
+
+```bash
+cd eval
+python tmp_run_cluster.py --efficiency --smallest
+
+# The expected console output is like:
+# qdisc netem 10: dev vethI parent 1:11 limit 1000 delay 10.0ms
+# qdisc noqueue 0: dev lo root refcnt 2 
+# qdisc htb 1: dev vethJ root refcnt 113 r2q 10 default 0x11 direct_packets_stat 0 direct_qlen 1000
+# qdisc netem 10: dev vethJ parent 1:11 limit 1000 delay 10.0ms
+# sudo ip netns exec A taskset --cpu-list 0-2 ./.././out/build/linux/eval/eval 0 8 0 10 3 0.4 1 5
+# sudo ip netns exec B taskset --cpu-list 3-5 ./.././out/build/linux/eval/eval 0 8 1 10 3 0.4 1 5
+# sudo ip netns exec C taskset --cpu-list 6-8 ./.././out/build/linux/eval/eval 0 8 2 10 3 0.4 1 5
+# sudo ip netns exec D taskset --cpu-list 9-11 ./.././out/build/linux/eval/eval 0 8 3 10 3 0.4 1 5
+# sudo ip netns exec E taskset --cpu-list 12-14 ./.././out/build/linux/eval/eval 0 8 4 10 3 0.4 1 5
+# sudo ip netns exec F taskset --cpu-list 15-17 ./.././out/build/linux/eval/eval 0 8 5 10 3 0.4 1 5
+# sudo ip netns exec G taskset --cpu-list 18-20 ./.././out/build/linux/eval/eval 0 8 6 10 3 0.4 1 5
+# sudo ip netns exec H taskset --cpu-list 21-23 ./.././out/build/linux/eval/eval 0 8 7 10 3 0.4 1 5
+# SUCCESS
+```
+
+Each line like `sudo ip netns exec <> taskset --cpu-list <>` set up a process with corresponding network namespace, representing a party participating in RingSG's collaborative graph processing.
+
+After this run, the corresponding logs are stored in `eval/log`, organized based on evaluation settings (like evaluated schemes, number of parties, algorithms, etc.). Fill free to browse them! For example:
+
+```bash
+cat log/efficiency/log/executable_0/net_cond_4000_1/num_parts_8/scale_10/alg_0/iters_5/efficiency_0.log
+
+# The expected console output is like:
+# OGA ENABLED
+# OEP ENABLED
+# ::Scatter took 0.049 seconds
+# ::Gather took 0.062 seconds
+# ::Scatter took 0.008 seconds
+# ::Gather took 0.054 seconds
+# ::Scatter took 0.006 seconds
+# ::Gather took 0.054 seconds
+# ::Scatter took 0.005 seconds
+# ::Gather took 0.054 seconds
+# ::Scatter took 0.005 seconds
+# ::Gather took 0.054 seconds
+# pIdx::0 
+# recv: 4.38295MB sent:4.38295MB total: 8.7659MB
+# ::ours took 0.366 seconds
+```
+
+## 3 Full Evaluation
+
+Now let's head for the full evaluations corresponding to the key results obtained in our paper. Fully running all the experiments in our paper might **take 3 days or more**. You can selectively verify some specific settings.
+
+**Cautions:**
+- **DO NOT** clean the log and comm folders, since they would be used for plot.
+- We provide a smallest version of our experiments for our audience who want to quickly verify our results. To enable this version, simply add the `--smallest` flag to each of your evaluation and plot instruction.
+
+The evaluation options provided by `tmp_run_cluster.py` include:
+> Note that we also specify which option (setting) corresponds to which Figure/Table in our paper. 
 
 # ABY 3 and Applications
  
