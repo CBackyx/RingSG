@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="./fig/logo.png" width=120>
+<img src="./fig/logo.png" width=140>
 
-<h1 >RingSG: <br> Optimal Framework for Secure Vertex-Centric Computation</h1>
+<h1 >Optimal Framework for Secure Vertex-Centric Computation</h1>
 
-[![License]()](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/github/license/cbackyx/RingSG)](https://opensource.org/licenses/Apache-2.0)
 [![ePrint]()]()
 
 </div>
