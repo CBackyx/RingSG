@@ -299,7 +299,7 @@ Copy the PDF figure from the container for local display:
 ```bash
 # In your local (host) machine:
 mkdir tmp
-sudo docker cp <your-container-id>:/work/Art/eval/plot/fig ./
+sudo docker cp <your-container-id>:/work/eval/plot/fig ./
 ```
 
 Have fun!
