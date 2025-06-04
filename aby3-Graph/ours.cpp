@@ -2,6 +2,7 @@
 #include "shuffle.h"
 #include <algorithm>
 #include <cryptoTools/Circuit/BetaLibrary.h>
+#include <cmath>
 
 #include "utils.h"
 
@@ -65,6 +66,9 @@ void our_scatter(
     ); 
     outputShare.resize(outputShare_byte.rows(), inputShare.cols());
     byteMat2intMat(outputShare_byte, outputShare);
+
+    // printf("output_of_scatter: (leng = %lu)\n", dstTag.size());
+    // reconstruct_and_print_matrix(outputShare_byte, pIdx, role, prevChl, nextChl); 
 
     i64Matrix edgeShare(outputShare.rows(), outputShare.cols());
     if (alg == Alg::CC) {
@@ -135,6 +139,10 @@ void our_gather(
         updateShare_byte,
         byteSize
     );
+
+    // if (role == 0) printf("input_of_gather: (leng = %lu)\n", updateShare.rows());
+    // reconstruct_and_print_matrix(updateShare_byte, pIdx, role, prevChl, nextChl);     
+
     run_OP(
         prevChl,
         nextChl,
@@ -143,6 +151,11 @@ void our_gather(
         updateShare_byte,
         sortedUpdateShare_byte        
     );
+
+    // if (role == 0) print_vector_lock(sortUpdateDst);
+    // if (role == 0) print_vector_lock(sortedUpdateTag);
+    // if (role == 0) printf("sortedUpdateShare_byte: (leng = %lu)\n", sortedUpdateShare_byte.rows());
+    // reconstruct_and_print_matrix(sortedUpdateShare_byte, pIdx, role, prevChl, nextChl);  
 
     // if (pIdx == 0 && role == 0) {
     //     print_vector_lock(sortedUpdateTag);
@@ -175,6 +188,7 @@ void our_gather(
 #ifdef REMOVE_OGA
     aggedUpdateShare_int = unaggedUpdateShare_int;
 #else
+    if (role == 0) printf("OGA\n");
     run_OGA(
         prevChl,
         nextChl,
@@ -193,6 +207,9 @@ void our_gather(
         aggedUpdateShare,
         byteSize
     );
+
+    // if (role == 0) printf("aggedUpdateShare: (leng = %lu)\n", aggedUpdateShare.rows());
+    // reconstruct_and_print_matrix(aggedUpdateShare, pIdx, role, prevChl, nextChl);  
 
     Matrix<u8> aggedUpdateShareExtracted(vertexShare.rows(), byteSize);
     run_OEP(
@@ -222,7 +239,58 @@ void our_gather(
         false        
     );
 
+    Matrix<u8> outputShare_byte(outputShare.rows(), byteSize);
+    intMat2ByteMat(
+        outputShare,
+        outputShare_byte,
+        byteSize
+    );
+
+    // if (role == 0) printf("outputShare: (leng = %lu)\n", outputShare_byte.rows());
+    // reconstruct_and_print_matrix(outputShare_byte, pIdx, role, prevChl, nextChl);  
+
     // reconstruct_and_print_matrix(outputShare, pIdx, role, prevChl, nextChl);
+}
+
+u64 nextPowerOfTwo(u64 n) {
+    if (n == 0) return 1;
+    if ((n & (n - 1)) == 0) return n;
+    return 1ULL << (64 - __builtin_clzll(n - 1));
+}
+
+void appendToMakePowerOfTwoGroups(std::vector<u64>& dstTag) {
+    if (dstTag.empty()) return;
+    std::vector<u64> dstTagCopy = dstTag;
+
+    // Sort to group identical elements
+    std::sort(dstTagCopy.begin(), dstTagCopy.end());
+
+    u64 prevTag = dstTagCopy[0];
+    u64 count = 1;
+    
+    for (auto it = dstTagCopy.begin() + 1; it != dstTagCopy.end();) {
+        if (*it == prevTag) {
+            count++;
+            it++;
+        } else {
+            // Calculate required elements for current group
+            const u64 nextPower = nextPowerOfTwo(count); // C++20, use alternative for older compilers
+            const u64 need = nextPower - count;
+            
+            // Append 'need' copies of prevTag
+            dstTag.insert(dstTag.end(), need, prevTag);
+            
+            // Reset for next group
+            prevTag = *it;
+            count = 1;
+            it++;
+        }
+    }
+
+    // Process the last group
+    const u64 nextPower = nextPowerOfTwo(count);
+    const u64 need = nextPower - count;
+    dstTag.insert(dstTag.end(), need, prevTag);
 }
 
 void our_gather_dummied(
@@ -240,13 +308,13 @@ void our_gather_dummied(
     // Caveat: This function is only for cost evaluation
     u64 numUpdates = dstTag.size();
     u64 dummiedNum = 2 * numUpdates - 1;
-    std::vector<u64> dummiedDstTag(dummiedNum);
-    for (u64 i = 0; i < numUpdates; ++i) {
-        dummiedDstTag[i] = dstTag[i];
-    }
-    for (u64 i = numUpdates; i < dummiedNum; ++i) {
-        dummiedDstTag[i] = (u64)-1;
-    }
+    std::vector<u64> dummiedDstTag = dstTag;
+    // for (u64 i = numUpdates; i < dummiedNum; ++i) {
+    //     dummiedDstTag[i] = (u64)-1;
+    // }
+    appendToMakePowerOfTwoGroups(dummiedDstTag);
+    dummiedDstTag.insert(dummiedDstTag.end(), dummiedNum - dummiedDstTag.size(), -1);
+
     i64Matrix dummiedUpdateShare(dummiedNum, updateShare.cols());
     dummiedUpdateShare.setZero();
     memcpy(dummiedUpdateShare.data(), updateShare.data(), updateShare.size() * sizeof(i64));

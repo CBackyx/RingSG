@@ -83,4 +83,4 @@ add_subdirectory(aby3-Graph_tests)
 add_subdirectory(frontend)
 add_subdirectory(eval)
 
-
+add_subdirectory(demo)

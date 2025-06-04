@@ -429,7 +429,8 @@ void run_OGA(
             rt
         );
         // sInput = curD;
-        sbMatrixExtractFill(curRange, seqs[r][1], curB, sInput);
+        // sbMatrixExtractFill(curRange, seqs[r][1], curB, sInput);
+        sbMatrixExtractFill(curRange, seqs[r][0], curD, sInput);
     }
     // sOutput.mShares[0](0) = sInput.mShares[0](0);
     // sOutput.mShares[1](0) = sInput.mShares[1](0);
