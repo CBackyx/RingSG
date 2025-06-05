@@ -18,7 +18,7 @@ Here is the table of contents of this document:
 - [1 Introduction](#1-introduction): introduce organization of the codebase;
 - [2 Quick Set Up](#2-quick-set-up): environmental requirements and step-by-step setup instructions;
 - [3 Full Evaluation](#3-full-evaluation): steps to run each part of the experiments and plot the results.  
-
+- [4 Visualized Demo](#4-visualized-demo): visualized demo for helping understand the problem setting and how RingSG runs.  
 
 > Caveat!!! Similar to the original [aby3](https://github.com/ladnir/aby3) library, this codebase should NOT be considered fully secure. It has not had a security review and there are still several security related issues that have not been fully implemented. Only use this codebase as a proof-of-concept or to benchmark the perfromance. Future work is required for this implementation to be considered secure.
 
@@ -323,6 +323,6 @@ sudo docker cp <your-container-id>:/work/eval/plot/fig ./
 
 ## 4 Visualized Demo
 
-We added a visualized Demo for helping the audience better understand how RingSG runs. Checkout the [Demo README](demo/README.md)!
+We added a visualized Demo for helping the audience better understand the problem setting of RingSG and how RingSG runs. Check out the [Demo README](demo/README.md)!
 
 Have fun!

@@ -3,6 +3,7 @@ import re
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import argparse
 from typing import List, Dict, Tuple, Set
 
 vertex_to_party = {}  # Map each vertex to its party
@@ -935,18 +936,20 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
         plt.savefig(output_pdf, format='pdf', bbox_inches='tight')
         print(f"Gather visualization saved to {output_pdf}")
 
-# Example usage
-if __name__ == "__main__":
-    WORKSPACE_DIR = "log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2"  # Update this path
-    OUTPUT_PDF = WORKSPACE_DIR + "/initial_graph_visualization.pdf"
+def visualize_input(WORKSPACE_DIR, output_file=True):
+    if output_file:
+        OUTPUT_PDF = WORKSPACE_DIR + "/initial_graph_visualization.pdf"   
+    else:
+        OUTPUT_PDF = None 
+    visualize_initial_global_graph(WORKSPACE_DIR, OUTPUT_PDF)    
+
+def visualize_computing_process(WORKSPACE_DIR):
     match = re.search(r"num_parts_(\d+)", WORKSPACE_DIR)
     if match:
         num_parties = int(match.group(1))
         print(f"Number of parties: {num_parties}")
     else:
         print("Number of parties not found in the string.")
-    
-    visualize_initial_global_graph(WORKSPACE_DIR, OUTPUT_PDF)
 
     for i in range(num_parties):
     # for i in range(1):
@@ -960,5 +963,34 @@ if __name__ == "__main__":
     
         visualize_gather_process(GATHER_FILE, OUTPUT_PDF)
 
+def visualize_output(WORKSPACE_DIR):
     OUTPUT_PDF = WORKSPACE_DIR + "/updated_graph_visualization.pdf"
-    visualize_updated_global_graph(WORKSPACE_DIR, OUTPUT_PDF)
+    visualize_updated_global_graph(WORKSPACE_DIR, OUTPUT_PDF)   
+
+def main():
+
+    WORKSPACE_DIR = "log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2"
+
+    parser = argparse.ArgumentParser(description='Visualize input, computing process and output of RingSG')
+    parser.add_argument('--input', action='store_true', help='Visualize Input')
+    parser.add_argument('--compute', action='store_true', help='Visualize Computation')
+    parser.add_argument('--output', action='store_true', help='Visualize Output')
+    parser.add_argument('--all', action='store_true', help='Visualize ALL')
+    args = parser.parse_args()
+
+    if args.input:
+        visualize_input(WORKSPACE_DIR)
+    if args.compute:
+        visualize_input(WORKSPACE_DIR, False)
+        visualize_computing_process(WORKSPACE_DIR)
+    if args.output:
+        visualize_input(WORKSPACE_DIR, False)
+        visualize_output(WORKSPACE_DIR)
+    if args.all:
+        visualize_input(WORKSPACE_DIR)
+        visualize_computing_process(WORKSPACE_DIR)
+        visualize_output(WORKSPACE_DIR)
+
+# Example usage
+if __name__ == "__main__":
+    main()
