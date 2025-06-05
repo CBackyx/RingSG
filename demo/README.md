@@ -146,6 +146,7 @@ vi log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/int
 Now, visualize the global graph (consisting of all parties' graphs and inter-edges):
 
 ```bash
+python -m pip install networkx # DON'T forget this!
 python visualize.py --input
 
 # Expected Output
@@ -231,7 +232,7 @@ Copy the PDF figure from the container for local display:
 
 ```bash
 # In your local (host) machine:
-mkdir tmp
+mkdir tmp && cd tmp
 sudo docker cp <your-container-id>:/work/demo/log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2 ./
 ```
 
