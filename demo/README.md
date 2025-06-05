@@ -152,7 +152,7 @@ python visualize.py --input
 # Visualization saved to log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2/initial_graph_visualization.pdf
 ```
 
-Check out the generated pdf! The red nodes represent nodes who get the label **1**, while the others get the label **0**.
+Check out the generated pdf! The red nodes represent vertices who have the initial label **1**, while the others have the label **0**.
 
 <p align="center">
   <img src="visualized_example/input.png" alt="..." width="500">
@@ -219,7 +219,7 @@ python visualize.py --output
 # Visualization saved to log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2/updated_graph_visualization.pdf
 ```
 
-Again, check out the generated pdf! The red nodes represent nodes who get the label **1**.
+Again, check out the generated pdf! The red nodes represent vertices who get the label **1**.
 
 <p align="center">
   <img src="visualized_example/output.png" alt="..." width="500">
