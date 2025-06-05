@@ -1921,6 +1921,7 @@ void Sh3_Graph_Ours_single_party_demo(
     auto scatterThread = [&](int role, i64Matrix& vertexDataShare, i64Matrix& updateShare1, i64Matrix& updateShare2) {
         std::vector<u64> srcTag;
         std::vector<u64> dstTag;
+        std::vector<u64> dstEndTag;
         i64Matrix updateShare;
         u64 numEdge = 0;
         int clientPIdx = 0;
@@ -1934,6 +1935,7 @@ void Sh3_Graph_Ours_single_party_demo(
         updateShare.setZero();
         srcTag.resize(numVertex);
         dstTag.resize(numEdge);
+        dstEndTag.resize(numEdge);
         if (role == 0) {
             printf("numEdge: %lu\n", numEdge);
             for (u64 i = 0; i < numVertex; ++i) {
@@ -1942,10 +1944,24 @@ void Sh3_Graph_Ours_single_party_demo(
             u64 cnt = 0;
             for (u64 i = 0; i < numP; ++i) {
                 for (u64 j = 0; j < numEdgeMat[clientPIdx][i]; ++j) {
+                    dstEndTag[cnt] = outgoingEdgeLists[i][j][1];
                     dstTag[cnt++] = outgoingEdgeLists[i][j][0];
                 }
             }
         }
+
+        if (role == 0) {
+            print_duration_mutex.lock();
+            printf(">>ScatterTask (Party %lu):\n", clientPIdx);
+            printf(">>Src: ");
+            for (u64 tt = 0; tt < srcTag.size(); ++tt) printf("(%lu) ", srcTag[tt]);
+            printf("\n");
+            printf(">>Dst: ");
+            for (u64 tt = 0; tt < dstTag.size(); ++tt) printf("(%lu %lu) ", dstTag[tt], dstEndTag[tt]);
+            printf("\n");
+            print_duration_mutex.unlock();
+        }
+
         our_scatter(
             computeComms[role].mPrev,
             computeComms[role].mNext,
@@ -2011,6 +2027,7 @@ void Sh3_Graph_Ours_single_party_demo(
         updatedVertexDataShare.setZero();
         std::vector<u64> vertexTag;
         std::vector<u64> dstTag;
+        std::vector<u64> dstBeginTag;
         i64Matrix updateShare;
         u64 numEdge = 0;
         int clientPIdx = 0;
@@ -2024,6 +2041,7 @@ void Sh3_Graph_Ours_single_party_demo(
         updateShare.setZero();
         vertexTag.resize(numVertex);
         dstTag.resize(numEdge);
+        dstBeginTag.resize(numEdge);
         // Decompose update Share and send    
         std::vector<i64Matrix> updateShares(numP);
         for (u64 i = 0; i < numP; ++i) {
@@ -2069,10 +2087,23 @@ void Sh3_Graph_Ours_single_party_demo(
             u64 cnt = 0;
             for (u64 i = 0; i < numP; ++i) {
                 for (u64 j = 0; j < numEdgeMat[i][clientPIdx]; ++j) {
+                    dstBeginTag[cnt] = incomingEdgeLists[i][j][0];
                     dstTag[cnt++] = incomingEdgeLists[i][j][1];
                 }
             }
         } 
+
+        if (role == 0) {
+            print_duration_mutex.lock();
+            printf(">>GatherTask (Party %lu):\n", clientPIdx);
+            printf(">>Dst:");
+            for (u64 tt = 0; tt < dstTag.size(); ++tt) printf("(%lu, %lu) ", dstBeginTag[tt], dstTag[tt]);
+            printf("\n");
+            printf(">>Vertex:");
+            for (auto tt : vertexTag) printf("(%lu) ", tt);
+            printf("\n");
+            print_duration_mutex.unlock();
+        }
 
         our_gather_dummied(
             computeComms[role].mPrev,
