@@ -2096,8 +2096,8 @@ void Sh3_Graph_Ours_single_party_demo(
         if (role == 0) {
             print_duration_mutex.lock();
             printf(">>GatherTask (Party %lu):\n", clientPIdx);
-            printf(">>Dst:");
-            for (u64 tt = 0; tt < dstTag.size(); ++tt) printf("(%lu, %lu) ", dstBeginTag[tt], dstTag[tt]);
+            printf(">>GatherDst:");
+            for (u64 tt = 0; tt < dstTag.size(); ++tt) printf("(%lu %lu) ", dstBeginTag[tt], dstTag[tt]);
             printf("\n");
             printf(">>Vertex:");
             for (auto tt : vertexTag) printf("(%lu) ", tt);

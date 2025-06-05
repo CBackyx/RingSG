@@ -931,7 +931,7 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
 
 # Example usage
 if __name__ == "__main__":
-    WORKSPACE_DIR = "log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.4/alg_0/iters_2"  # Update this path
+    WORKSPACE_DIR = "log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2"  # Update this path
     OUTPUT_PDF = WORKSPACE_DIR + "/initial_graph_visualization.pdf"
     match = re.search(r"num_parts_(\d+)", WORKSPACE_DIR)
     if match:

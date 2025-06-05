@@ -224,7 +224,7 @@ def demo():
     list_num_parts = [8]
     list_scales = [3]
     list_avgDegrees = [3]
-    list_interRatios = [0.4]
+    list_interRatios = [0.6]
     list_algs = [0,1]
     iterations = 2
 
