@@ -201,15 +201,16 @@ def visualize_initial_global_graph(workspace_dir: str, output_pdf: str = None):
     G.add_edges_from(all_edges)
 
     # Calculate party circle centers
-    party_centers = assign_party_positions(parties)
+    party_centers = assign_party_positions(parties, center_radius=2)
 
-    party_radius = 0.3  # Adjust based on number of parties
+    party_radius = 0.4  # Adjust based on number of parties
     
     # Calculate vertex positions within party circles
     vertex_positions = assign_vertices_in_party_circles(parties, party_centers, party_radius)
     
     # Create figure
     fig, ax = plt.subplots()
+    fig.set_size_inches(15, 15)
     
     # Draw party circles
     for party_id, (center_x, center_y) in party_centers.items():
@@ -269,7 +270,7 @@ def visualize_initial_global_graph(workspace_dir: str, output_pdf: str = None):
     # Add title and formatting
     plt.title('Global Graph Visualization with Party Boundaries', fontsize=14)
     plt.axis('equal')
-    plt.margins(0.3)  # Increase margins to accommodate labels
+    plt.margins(0.1)  # Increase margins to accommodate labels
     plt.gca().set_aspect('equal', adjustable='box')
     
     # Save as PDF if requested
@@ -343,15 +344,16 @@ def visualize_updated_global_graph(workspace_dir: str, output_pdf: str = None):
     G.add_edges_from(all_edges)
 
     # Calculate party circle centers
-    party_centers = assign_party_positions(parties)
+    party_centers = assign_party_positions(parties, center_radius=2)
 
-    party_radius = 0.3  # Adjust based on number of parties
+    party_radius = 0.4  # Adjust based on number of parties
     
     # Calculate vertex positions within party circles
     vertex_positions = assign_vertices_in_party_circles(parties, party_centers, party_radius)
     
     # Create figure
     fig, ax = plt.subplots()
+    fig.set_size_inches(15, 15)
     
     # Draw party circles
     for party_id, (center_x, center_y) in party_centers.items():
@@ -411,7 +413,7 @@ def visualize_updated_global_graph(workspace_dir: str, output_pdf: str = None):
     # Add title and formatting
     plt.title('Global Graph Visualization with Party Boundaries', fontsize=14)
     plt.axis('equal')
-    plt.margins(0.3)  # Increase margins to accommodate labels
+    plt.margins(0.1)  # Increase margins to accommodate labels
     plt.gca().set_aspect('equal', adjustable='box')
     
     # Save as PDF if requested
@@ -582,8 +584,8 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
         edge_data.append((src_id, dst_party, dst_id, edge_type))
     
     # Create figure with gridspec
-    fig = plt.figure(figsize=(30, 15))
-    gs = fig.add_gridspec(1, 2, width_ratios=[2, 1])
+    fig = plt.figure(figsize=(25, 15))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
     
     # ==== Original Graph Visualization (Left) ====
     ax1 = fig.add_subplot(gs[0])
@@ -631,7 +633,7 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
         
         for vertex_idx, vertex_id in enumerate(party_vertices):
             # Position each vertex around the party's circle
-            offset_theta = 2 * np.pi * (vertex_idx / max(num_vertices, 1)) * 0.3  # 0.3 scale for spacing
+            offset_theta = 2 * np.pi * (vertex_idx / num_vertices) * (0.3 / len(target_parties))  # 0.3 scale for spacing
             radius = 1.2  # Base radius for target parties
             
             x = radius * np.cos(base_theta + offset_theta)
@@ -653,10 +655,10 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
         group_center = np.mean([pos[(party, v)] for v in party_vertices], axis=0)
         
         # Draw party circle (larger to encompass all vertices)
-        circle = plt.Circle(group_center, 0.15, fill=False, 
+        circle = plt.Circle(group_center, 0.2, fill=False, 
                         edgecolor=plt.cm.tab10(party % 10), linewidth=2)
         ax1.add_patch(circle)
-        ax1.text(group_center[0], group_center[1] - 0.2, f'Party {party}', 
+        ax1.text(group_center[0], group_center[1] - 0.25, f'Party {party}', 
                 ha='center', va='center')
 
     # Draw nodes
@@ -775,10 +777,12 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
     for src_id, src_party, dst_id in edges:
         edge_type = "intra" if src_party == dest_party else "inter"
         edge_data.append((src_id, src_party, dst_id, edge_type))
+
+    # print(edges)
     
     # Create figure with gridspec
-    fig = plt.figure(figsize=(30, 15))
-    gs = fig.add_gridspec(1, 2, width_ratios=[2, 1])
+    fig = plt.figure(figsize=(25, 15))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
     
     # ==== Original Graph Visualization (Left) ====
     ax1 = fig.add_subplot(gs[0])
@@ -804,6 +808,8 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
                 source_groups[source_key] = len(source_groups)
             G.add_edge(source_key, dst_id, type='inter')
 
+    # print(source_groups)
+
     # ==== Positioning ====
     pos = {}
 
@@ -825,7 +831,7 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
         
         for vertex_idx, vertex_id in enumerate(party_vertices):
             # Position each vertex around the party's circle
-            offset_theta = 2 * np.pi * (vertex_idx / max(num_vertices, 1)) * 0.3  # Spacing scale
+            offset_theta = 2 * np.pi * (vertex_idx / num_vertices) * (0.3 / len(source_parties))  # Spacing scale
             radius = 1.2  # Base radius for source parties
             
             x = radius * np.cos(base_theta + offset_theta)
@@ -845,10 +851,10 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
         group_center = np.mean([pos[node[1]] for node in party_nodes], axis=0) if party_nodes else (0,0)
         
         # Draw party circle
-        circle = plt.Circle(group_center, 0.15, fill=False, 
+        circle = plt.Circle(group_center, 0.2, fill=False, 
                         edgecolor=plt.cm.tab10(party % 10), linewidth=2)
         ax1.add_patch(circle)
-        ax1.text(group_center[0], group_center[1] + 0.2, f'Party {party}', 
+        ax1.text(group_center[0], group_center[1] + 0.25, f'Party {party}', 
                 ha='center', va='center')
 
     # Draw nodes
@@ -942,7 +948,8 @@ if __name__ == "__main__":
     
     visualize_initial_global_graph(WORKSPACE_DIR, OUTPUT_PDF)
 
-    for i in range(num_parties):
+    # for i in range(num_parties):
+    for i in range(1):
         SCATTER_FILE = WORKSPACE_DIR + f"/efficiency_{i}.log"
         OUTPUT_PDF = WORKSPACE_DIR + f"/scatter_visualization_{i}.pdf"
         
