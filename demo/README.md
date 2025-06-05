@@ -225,6 +225,15 @@ Again, check out the generated pdf! The red nodes represent vertices who get the
   <img src="visualized_example/output.png" alt="..." width="500">
 </p>
 
+## Tips
+
+Copy the PDF figure from the container for local display:
+
+```bash
+# In your local (host) machine:
+mkdir tmp
+sudo docker cp <your-container-id>:/work/demo/log/demo/log/executable_0/net_cond_4000_1/num_parts_8/scale_3/avgDegree_3/interRatio_0.6/alg_0/iters_2 ./
+```
 
 
 
