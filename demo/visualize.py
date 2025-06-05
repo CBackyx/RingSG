@@ -265,10 +265,10 @@ def visualize_initial_global_graph(workspace_dir: str, output_pdf: str = None):
     )
     
     # Draw labels
-    nx.draw_networkx_labels(G, pos=vertex_positions, font_size=8)
+    nx.draw_networkx_labels(G, pos=vertex_positions, font_size=12)
     
     # Add title and formatting
-    plt.title('Global Graph Visualization with Party Boundaries', fontsize=14)
+    plt.title('Global Graph Visualization with Party Boundaries', fontsize=20)
     plt.axis('equal')
     plt.margins(0.1)  # Increase margins to accommodate labels
     plt.gca().set_aspect('equal', adjustable='box')
@@ -408,10 +408,10 @@ def visualize_updated_global_graph(workspace_dir: str, output_pdf: str = None):
     )
     
     # Draw labels
-    nx.draw_networkx_labels(G, pos=vertex_positions, font_size=8)
+    nx.draw_networkx_labels(G, pos=vertex_positions, font_size=12)
     
     # Add title and formatting
-    plt.title('Global Graph Visualization with Party Boundaries', fontsize=14)
+    plt.title('Global Graph Visualization with Party Boundaries', fontsize=20)
     plt.axis('equal')
     plt.margins(0.1)  # Increase margins to accommodate labels
     plt.gca().set_aspect('equal', adjustable='box')
@@ -589,7 +589,7 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
     
     # ==== Original Graph Visualization (Left) ====
     ax1 = fig.add_subplot(gs[0])
-    ax1.set_title("Graph Visualization", fontsize=14)
+    ax1.set_title("Scatter Process Visualization", fontsize=18)
     
     # Create graph
     G = nx.DiGraph()
@@ -694,7 +694,7 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
     
     # ==== Combined Tables (Right) ====
     ax_tables = fig.add_subplot(gs[1])
-    ax_tables.set_title("Vertex & Outgoing Edge Tables", fontsize=14)
+    ax_tables.set_title("Vertex & Outgoing Edge Tables", fontsize=18)
     
     # Draw vertex table
     vertex_table = ax_tables.table(
@@ -704,7 +704,7 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
         cellLoc='center',
         bbox=[0, 0.3, 0.45, 0.5]  # Left half of the table area
     )
-    vertex_table.set_fontsize(10)
+    vertex_table.set_fontsize(12)
     vertex_table.scale(1, 1.5)
 
     edge_data = sorted(edge_data, key=lambda x: x[2])
@@ -725,13 +725,13 @@ def visualize_scatter_process(scatter_file: str, output_pdf: str = None):
             for j in range(len(edge_table.get_celld()) // len(edge_data)):
                 edge_table[(i+1, j)].set_facecolor('#ffffff')
 
-    edge_table.set_fontsize(10)
+    edge_table.set_fontsize(12)
     edge_table.scale(1, 1.5)
 
     ax_tables.axis('off')
     
     # Add title and formatting
-    plt.suptitle(f'ScatterTask from Party {source_party}', fontsize=16, y=0.95)
+    plt.suptitle(f'ScatterTask from Party {source_party}', fontsize=20, y=0.95)
     
     # Save to PDF
     if output_pdf:
@@ -786,7 +786,7 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
     
     # ==== Original Graph Visualization (Left) ====
     ax1 = fig.add_subplot(gs[0])
-    ax1.set_title("Gather Process Visualization", fontsize=14)
+    ax1.set_title("Gather Process Visualization", fontsize=18)
     
     # Create graph
     G = nx.DiGraph()
@@ -890,7 +890,7 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
     
     # ==== Combined Tables (Right) ====
     ax_tables = fig.add_subplot(gs[1])
-    ax_tables.set_title("Incoming Edge & Vertex Tables", fontsize=14)
+    ax_tables.set_title("Incoming Edge & Vertex Tables", fontsize=18)
 
     edge_data = sorted(edge_data, key=lambda x: x[2])
     
@@ -911,7 +911,7 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
             for j in range(len(edge_table.get_celld()) // len(edge_data)):
                 edge_table[(i+1, j)].set_facecolor('#ffffff')
 
-    edge_table.set_fontsize(18)
+    edge_table.set_fontsize(12)
     edge_table.scale(1, 1.5)
     
     # Draw destination vertex table
@@ -922,13 +922,13 @@ def visualize_gather_process(gather_file: str, output_pdf: str = None):
         cellLoc='center',
         bbox=[0.55, 0.3, 0.45, 0.5]  # Left half
     )
-    vertex_table.set_fontsize(10)
+    vertex_table.set_fontsize(12)
     vertex_table.scale(1, 1.5)
 
     ax_tables.axis('off')
     
     # Add title and formatting
-    plt.suptitle(f'GatherTask to Party {dest_party}', fontsize=16, y=0.95)
+    plt.suptitle(f'GatherTask to Party {dest_party}', fontsize=20, y=0.95)
     
     # Save to PDF
     if output_pdf:
@@ -948,8 +948,8 @@ if __name__ == "__main__":
     
     visualize_initial_global_graph(WORKSPACE_DIR, OUTPUT_PDF)
 
-    # for i in range(num_parties):
-    for i in range(1):
+    for i in range(num_parties):
+    # for i in range(1):
         SCATTER_FILE = WORKSPACE_DIR + f"/efficiency_{i}.log"
         OUTPUT_PDF = WORKSPACE_DIR + f"/scatter_visualization_{i}.pdf"
         

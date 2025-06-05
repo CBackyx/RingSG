@@ -225,7 +225,7 @@ def demo():
     list_scales = [3]
     list_avgDegrees = [3]
     list_interRatios = [0.6]
-    list_algs = [0,1]
+    list_algs = [0]
     iterations = 2
 
     for cur_scheme in list_schemes:
@@ -237,42 +237,13 @@ def demo():
                             for cur_alg in list_algs:
                                 run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
 
-def demo_app():
-    global iterations
-    global isCluster
-
-    isCluster = True
-    set_root_paths("log/app")
-
-    print("##<------------>##")
-
-    list_schemes = [3] # 3 for our app instantiation
-    list_net_conds = [(4000, 1)]
-    list_num_parts = [8]
-    list_avgDegrees = [3]
-    list_interRatios = [0.4]
-    list_scales = [3]
-    list_algs = [0, 1] # 0 for Detect Group Connection, 1 for Trace Transfer Chain
-    iterations = 10
-
-    for cur_scheme in list_schemes:
-        for cur_net_cond in list_net_conds:
-            for cur_num_parts  in list_num_parts:
-                for cur_scale in list_scales:
-                    for cur_avgDegree in list_avgDegrees:
-                        for cur_interRatio in list_interRatios:
-                            for cur_alg in list_algs:
-                                run_graph_processing_with_limited_cores(cur_scheme, cur_net_cond, cur_num_parts, cur_scale, cur_avgDegree, cur_interRatio, cur_alg, iterations)
-
-
 # Define the main function to parse command line arguments and call the appropriate functions
 def main():
 
     global demoCommand
 
-    parser = argparse.ArgumentParser(description='Demo RingSG for various collaborative graph processing tasks.')
+    parser = argparse.ArgumentParser(description='Demo RingSG for Connected Component Labeling')
     parser.add_argument('--demo', action='store_true', help='Demo')
-    parser.add_argument('--demo-app', action='store_true', help='Demo Application')
     parser.add_argument('--command', type=str, help='Demo command')
     args = parser.parse_args()
 
@@ -280,8 +251,6 @@ def main():
 
     if args.demo:
         demo()
-    if args.demo_app:
-        demo_app()
 
 if __name__ == "__main__":
     main()

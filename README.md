@@ -321,4 +321,8 @@ mkdir tmp
 sudo docker cp <your-container-id>:/work/eval/plot/fig ./
 ```
 
+## 4 Visualized Demo
+
+We added a visualized Demo for helping the audience better understand how RingSG runs. Checkout the [Demo README](demo/README.md)!
+
 Have fun!
